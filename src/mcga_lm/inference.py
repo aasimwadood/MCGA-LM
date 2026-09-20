@@ -140,6 +140,7 @@ class AdaptiveCommunicator:
             # spend up to J_max activations on candidates drawn from an
             # arbitrary sub-graph, so go straight to Algorithm 1's line-23
             # fallback and keep those activations.
+            assert a <= c_max + j_max, "Algorithm 1 line 24 violated"
             return self._abstain(
                 a=a, c=c, variance=variance, confidence=confidence,
                 gate_accepted=gate_decision.accept or forced, forced=forced,
