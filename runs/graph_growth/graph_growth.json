@@ -1,5 +1,5 @@
 {
-  "provenance": "These numbers are produced by an independent re-implementation running on synthetic personas with a weight-free template language backend by default. They are NOT the paper's reported results and must not be presented as a reproduction of them.",
+  "provenance": "These numbers are produced running on synthetic personas with a weight-free template language backend by default. They are NOT the paper's reported results and must not be presented as a reproduction of them.",
   "settings": {
     "utterances": 1500,
     "days": 180.0,
