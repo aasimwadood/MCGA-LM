@@ -38,11 +38,19 @@ class TrainingReport:
     history: List[Dict[str, float]] = field(default_factory=list)
     head_history: List[Dict[str, float]] = field(default_factory=list)
     tau_by_persona: Dict[str, float] = field(default_factory=dict)
+    # Confidence floor chosen alongside each tau by the FAR guard.
+    floor_by_persona: Dict[str, float] = field(default_factory=dict)
     tau_trace: Dict[str, list] = field(default_factory=dict)
+    # Personas for which no (tau, floor) setting met the FAR budget. A non-empty
+    # set means the gate cannot bound false acceptance for those users, which is
+    # a safety result and must not be left to a log line.
+    far_budget_missed: set = field(default_factory=set)
     per_persona: bool = False
 
     def summary(self) -> Dict[str, float]:
         taus = list(self.tau_by_persona.values())
+        floors = list(self.floor_by_persona.values())
+        n = max(len(self.tau_by_persona), 1)
         return {
             "per_persona": float(self.per_persona),
             "final_loss": self.history[-1]["total"] if self.history else float("nan"),
@@ -51,6 +59,9 @@ class TrainingReport:
             "tau_sd": float(np.std(taus, ddof=1)) if len(taus) > 1 else 0.0,
             "tau_min": float(np.min(taus)) if taus else float("nan"),
             "tau_max": float(np.max(taus)) if taus else float("nan"),
+            "floor_mean": float(np.mean(floors)) if floors else float("nan"),
+            "far_budget_missed_n": float(len(self.far_budget_missed)),
+            "far_budget_missed_frac": float(len(self.far_budget_missed) / n),
         }
 
 
@@ -259,15 +270,21 @@ def calibrate_thresholds(
     device: torch.device,
     encoder: TurnEncoder,
     rule: str = "largest",
-) -> Tuple[Dict[str, float], Dict[str, list]]:
+) -> Tuple[Dict[str, float], Dict[str, float], Dict[str, list], set]:
     """Per-persona threshold calibration (paper Sec. 3.6).
+
+    Returns ``(taus, floors, traces, far_budget_missed)``. ``floors`` is the
+    confidence floor the FAR guard picked alongside each tau, and the final
+    element names the personas for which no setting met the budget at all.
 
     "tau is calibrated per user during the initial 30-minute session: collect
     ~50 low-confidence candidates ... compute FAR on held-out data ... select
     [the] tau with FAR <= 0.05." See D-01 in safety/gate.py about ``rule``.
     """
     taus: Dict[str, float] = {}
+    floors: Dict[str, float] = {}
     traces: Dict[str, list] = {}
+    missed: set = set()
     for persona in personas:
         turns = persona.simulate_session(
             seed=CALIBRATION_SEED, n_turns=max(cfg.safety.calibration_samples // 2, 10)
@@ -277,19 +294,36 @@ def calibrate_thresholds(
             model, backend, persona, session, cfg, device, seed=CALIBRATION_SEED
         )
         variances: List[float] = []
+        confidences: List[float] = []
         accepted: List[bool] = []
         for context, tokens, label in examples[: cfg.safety.calibration_samples]:
             estimate = model.uncertainty(context.to(device), tokens.to(device))
             variances.append(float(estimate.variance[0]))
+            # The FAR guard calibrates a confidence floor alongside tau, so the
+            # head's predicted acceptance probability has to be kept too.
+            confidences.append(float(estimate.confidence[0]))
             accepted.append(bool(label))
         gate = BayesianGate(cfg.safety)
         if variances:
-            tau, trace = gate.calibrate(variances, accepted, rule=rule)
+            tau, trace = gate.calibrate(variances, accepted, rule=rule, confidences=confidences)
+            if gate.budget_met is False:
+                missed.add(persona.spec.persona_id)
+                logger.warning(
+                    "persona %s: no (tau, floor) setting met the %.0f%% FAR budget",
+                    persona.spec.persona_id, cfg.safety.far_budget * 100,
+                )
         else:
             tau, trace = cfg.safety.tau_default, []
         taus[persona.spec.persona_id] = float(tau)
+        floors[persona.spec.persona_id] = float(gate.confidence_floor)
         traces[persona.spec.persona_id] = trace
-    return taus, traces
+    if missed:
+        logger.warning(
+            "FAR budget unreachable for %d/%d personas: %s. Reported FAR for these "
+            "users is not bounded by the gate.",
+            len(missed), len(personas), ", ".join(sorted(missed)),
+        )
+    return taus, floors, traces, missed
 
 
 # --------------------------------------------------------------------------- #
@@ -347,13 +381,15 @@ def train(
             )
     head_history = train_scoring_head(model, examples, cfg, device, epochs=head_epochs)
 
-    taus, traces = calibrate_thresholds(model, backend, personas, cfg, device, encoder)
+    taus, floors, traces, missed = calibrate_thresholds(model, backend, personas, cfg, device, encoder)
 
     report = TrainingReport(
         epochs=n_epochs,
         history=history,
         head_history=head_history,
         tau_by_persona=taus,
+        floor_by_persona=floors,
+        far_budget_missed=missed,
         tau_trace=traces,
         per_persona=False,
     )
@@ -402,6 +438,8 @@ def _train_per_persona(
         )
         models[pid] = model
         combined.tau_by_persona.update(report.tau_by_persona)
+        combined.floor_by_persona.update(report.floor_by_persona)
+        combined.far_budget_missed |= report.far_budget_missed
         combined.tau_trace.update(report.tau_trace)
         if report.history:
             combined.history.append({"persona": pid, **report.history[-1]})

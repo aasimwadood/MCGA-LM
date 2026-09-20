@@ -100,6 +100,7 @@ def run_generative_system(
     personas: Sequence[Persona],
     seeds: Sequence[int],
     taus: Optional[Dict[str, float]] = None,
+    floors: Optional[Dict[str, float]] = None,
     device: Optional[torch.device] = None,
     split: str = IN_DISTRIBUTION,
     intake_fraction: float = 0.25,
@@ -119,6 +120,8 @@ def run_generative_system(
     for persona in personas:
         persona_model = _model_for(model, persona.spec.persona_id).eval()
         tau = (taus or {}).get(persona.spec.persona_id, cfg.safety.tau_default)
+        # Confidence floor from the FAR guard; absent -> 0.0, i.e. Sec. 3.6's rule.
+        floor = (floors or {}).get(persona.spec.persona_id, cfg.safety.confidence_floor)
         per_seed: List[Dict[str, float]] = []
         for seed in seeds:
             turns = persona.simulate_session(
@@ -147,7 +150,11 @@ def run_generative_system(
                 )
 
             communicator = AdaptiveCommunicator(
-                persona_model, backend, cfg, gate=BayesianGate(cfg.safety, tau=tau), device=device
+                persona_model,
+                backend,
+                cfg,
+                gate=BayesianGate(cfg.safety, tau=tau, confidence_floor=floor),
+                device=device,
             )
             rng = np.random.default_rng(seed * 7919 + persona.seed)
             turn_results: List[TurnResult] = []

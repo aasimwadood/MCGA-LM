@@ -60,7 +60,7 @@ def main() -> None:
         )
         res, _ = R.run_generative_system(
             name, vcfg, model, backend, personas, seeds,
-            taus=report.tau_by_persona, device=device,
+            taus=report.tau_by_persona, floors=report.floor_by_persona, device=device,
             # Sec. 4.4: the TFT ablation is the one that must be probed under
             # induced fatigue, since it "has little effect when rested".
             adapted_fatigue=not args.fatigued,

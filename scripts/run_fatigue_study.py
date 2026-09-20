@@ -44,17 +44,17 @@ def main() -> None:
         vcfg = get_variant(name).apply(cfg)
         model, report = train(vcfg, personas, backend, epochs=args.epochs, head_epochs=2,
                               pretrained=args.pretrained, per_persona=args.per_persona)
-        systems[name] = (vcfg, model, report.tau_by_persona)
+        systems[name] = (vcfg, model, report.tau_by_persona, report.floor_by_persona)
 
     # --- Sec. 5.4: rested vs fatigued ------------------------------------- #
     rows: List[Dict] = []
-    for name, (vcfg, model, taus) in systems.items():
+    for name, (vcfg, model, taus, floors) in systems.items():
         rested, _ = R.run_generative_system(
-            name, vcfg, model, backend, personas, seeds, taus=taus, device=device,
+            name, vcfg, model, backend, personas, seeds, taus=taus, floors=floors, device=device,
             fatigue_half_life=1e6, fatigue_peak=0.05, adapted_fatigue=False,
         )
         fatigued, _ = R.run_generative_system(
-            name, vcfg, model, backend, personas, seeds, taus=taus, device=device,
+            name, vcfg, model, backend, personas, seeds, taus=taus, floors=floors, device=device,
             adapted_fatigue=(name == "MCGA-LM"),
         )
         retained = fatigued.aggregate["wpm"]["mean"] / rested.aggregate["wpm"]["mean"]
@@ -75,9 +75,9 @@ def main() -> None:
     for half_life in (15.0, 30.0, 45.0, 60.0):
         for peak in (0.5, 0.7, 0.9):
             row = {"half_life_min": half_life, "peak": peak}
-            for name, (vcfg, model, taus) in systems.items():
+            for name, (vcfg, model, taus, floors) in systems.items():
                 res, _ = R.run_generative_system(
-                    name, vcfg, model, backend, personas, seeds, taus=taus, device=device,
+                    name, vcfg, model, backend, personas, seeds, taus=taus, floors=floors, device=device,
                     fatigue_half_life=half_life, fatigue_peak=peak,
                     adapted_fatigue=(name == "MCGA-LM"),
                 )

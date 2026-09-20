@@ -83,13 +83,13 @@ def main() -> None:
         logger.info("evaluating %s", name)
         res, _ = R.run_generative_system(
             name, vcfg, model, backend, personas, seeds,
-            taus=report.tau_by_persona, device=device, split=R.IN_DISTRIBUTION,
+            taus=report.tau_by_persona, floors=report.floor_by_persona, device=device, split=R.IN_DISTRIBUTION,
         )
         results[name] = res
         if not args.skip_heldout:
             ho, _ = R.run_generative_system(
                 name, vcfg, model, backend, personas, seeds,
-                taus=report.tau_by_persona, device=device, split=R.HELD_OUT,
+                taus=report.tau_by_persona, floors=report.floor_by_persona, device=device, split=R.HELD_OUT,
             )
             heldout[name] = ho
 
@@ -113,9 +113,16 @@ def main() -> None:
         "results": {k: {"aggregate": v.aggregate, "per_persona": v.per_persona} for k, v in results.items()},
         "held_out": {k: {"aggregate": v.aggregate} for k, v in heldout.items()},
         "statistics": stats,
+        # Sec. 3.6 safety: personas whose FAR the gate could not bound at all.
+        "calibration": {
+            "summary": report.summary(),
+            "tau_by_persona": report.tau_by_persona,
+            "floor_by_persona": report.floor_by_persona,
+            "far_budget_missed": sorted(report.far_budget_missed),
+        },
     }
     save_json(payload, target / "results.json")
-    table = _markdown_tables(results, heldout, stats)
+    table = _markdown_tables(results, heldout, stats, report)
     (target / "results.md").write_text(table, encoding="utf-8")
     print(table)
     print(f"\nwritten to {target}")
@@ -231,7 +238,7 @@ def _fmt_sact(agg: Dict[str, Dict[str, float]]) -> str:
     return base
 
 
-def _markdown_tables(results, heldout, stats) -> str:
+def _markdown_tables(results, heldout, stats, report=None) -> str:
     lines: List[str] = []
     lines.append("# MCGA-LM results (synthetic personas)\n")
     lines.append("> " + provenance_note().replace("\n", " ") + "\n")
@@ -282,6 +289,23 @@ def _markdown_tables(results, heldout, stats) -> str:
             "(Sec. 5.1; 10,000 resamples), resampled pairwise so the "
             "repeated-measures pairing is preserved."
         )
+    if report is not None:
+        missed = sorted(getattr(report, "far_budget_missed", ()) or ())
+        lines.append("\n## Safety calibration (paper Sec. 3.6)\n")
+        if missed:
+            lines.append(
+                f"⚠️ **The FAR budget was unreachable for {len(missed)} persona(s):** "
+                f"{', '.join(missed)}. For these users no (τ, floor) setting kept false "
+                f"acceptance within {getattr(report, 'far_budget', 0.05):.0%}, so the FAR "
+                f"reported above is **not bounded by the gate**. This is the signature of a "
+                f"scoring head that is confidently wrong rather than uncertain, which no "
+                f"variance threshold can detect."
+            )
+        else:
+            lines.append(
+                "The FAR budget was met for every persona; each τ was paired with a "
+                "calibrated confidence floor."
+            )
     return "\n".join(lines) + "\n"
 
 

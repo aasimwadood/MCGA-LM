@@ -56,7 +56,7 @@ def main() -> None:
     rag_model, rag_report = train(rag_cfg, personas, backend, epochs=args.epochs, head_epochs=2,
                                   pretrained=args.pretrained, per_persona=args.per_persona)
     rag, _ = R.run_generative_system("RAG-LLM", rag_cfg, rag_model, backend, personas,
-                                     cfg.simulation.seeds, taus=rag_report.tau_by_persona, device=device)
+                                     cfg.simulation.seeds, taus=rag_report.tau_by_persona, floors=rag_report.floor_by_persona, device=device)
     baseline_sact = rag.aggregate["sact"]["mean"]
 
     curve: Dict[int, List[float]] = {c: [] for c in args.checkpoints}

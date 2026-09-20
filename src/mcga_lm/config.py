@@ -177,6 +177,32 @@ class SafetyConfig:
     # Ablation switch (Sec. 4.4 "\ Bayesian Gate").
     enabled: bool = True
 
+    # --- FAR guard -------------------------------------------------------- #
+    # Sec. 3.6's printed rule gates on Var(y_hat) < tau alone. Predictive
+    # variance measures whether the MC-Dropout samples agree with EACH OTHER,
+    # not whether they are right, so a scoring head that is uniformly confident
+    # and uniformly wrong has near-zero variance and passes every tau in the
+    # grid. Calibration then cannot bound FAR at all: the budget is met at no
+    # grid point and the gate falls back to the tightest tau, which still
+    # admits everything. That is the exact failure Table 2 names as the reason
+    # to distrust a plain LLM -- "erroneous output with high confidence".
+    #
+    # 'guarded' additionally requires the predicted acceptance probability to
+    # clear a calibrated floor, which gives calibration a second axis to move
+    # along and makes the FAR budget reachable. 'variance_only' reproduces
+    # Sec. 3.6 exactly and is kept so the printed rule stays runnable.
+    decision_rule: str = "guarded"  # 'guarded' | 'variance_only'
+    # Search grid for the confidence floor, used only when decision_rule is
+    # 'guarded'. 0.0 is "no floor", i.e. the printed rule.
+    confidence_floor: float = 0.0  # set by calibrate(); 0.0 until calibrated
+    floor_grid_stop: float = 0.9
+    floor_grid_step: float = 0.1
+    # Raise instead of falling back when no setting meets the FAR budget. The
+    # default records the miss and warns rather than raising, so a sweep over
+    # many personas does not abort on one bad fit; the flag is on the gate as
+    # ``budget_met`` and in the calibration trace either way.
+    strict_far_budget: bool = False
+
 
 # --------------------------------------------------------------------------- #
 # Algorithm 1 (paper p. 14)
@@ -187,6 +213,28 @@ class InferenceConfig:
 
     c_max: int = 2  # C_max, clarification rounds
     j_max: int = 3  # J_max, candidate presentations
+
+    # --- retrieval floor -------------------------------------------------- #
+    # Algorithm 1 generates from whatever the GAT returns, however weak the
+    # match. When retrieval is at chance the top-K sub-graph is arbitrary, the
+    # LLM writes a fluent utterance about the wrong entity, and the Bayesian
+    # gate cannot catch it: the scoring head is confidently wrong, not
+    # uncertain. The turn then burns switch activations on candidates that were
+    # never going to be accepted.
+    #
+    # Node scores are a softmax over |V|, so K uniform nodes would hold
+    # K/|V| of the mass. This floor requires the selected sub-graph to hold at
+    # least ``min_retrieval_mass_ratio`` times that, which is scale-free in both
+    # K and |V|. Below it, the turn goes straight to Clarification Mode -- the
+    # paper's own low-effort fallback (Sec. 3.6) -- and abstains if that is
+    # exhausted, rather than presenting a guess.
+    #
+    # DEFAULT 0.0 = DISABLED, deliberately. The mechanism is sound but the
+    # threshold is not calibrated against a working retrieval stage, and a
+    # miscalibrated floor would abstain everywhere and look like safety while
+    # actually being breakage. 2.0-3.0 is the sensible starting range once
+    # retrieval is fixed; check the abstention rate when enabling it.
+    min_retrieval_mass_ratio: float = 0.0
     # T_select, Sec. 5.2. NOTE (D-12): with K=3 and P=0.89 this yields 13.9
     # bits/min, not the 18.3 Sec. 5.2 prints; 3.2 s would. We keep the
     # paper's stated value rather than the one that reproduces its result.

@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from mcga_lm.config import SafetyConfig
-from mcga_lm.safety.gate import BayesianGate, clarification_bubbles
+from mcga_lm.safety.gate import BayesianGate, FARBudgetUnreachable, clarification_bubbles
 
 
 def test_decision_rule_is_strictly_below_tau() -> None:
@@ -127,3 +127,129 @@ def test_calibration_can_only_return_a_grid_point() -> None:
         gate = BayesianGate(SafetyConfig())
         tau, _trace = gate.calibrate(variances, accepted)
         assert round(float(tau), 10) in grid
+
+
+# ------------------------------------------------- FAR guard (D-17) -------- #
+def _confidently_wrong(n: int = 400, seed: int = 0):
+    """Variance says "certain", the user says "no". The case Sec. 3.6 cannot see."""
+    rng = np.random.default_rng(seed)
+    variances = rng.uniform(0.0, 0.005, n).tolist()   # below every grid point
+    confidences = rng.uniform(0.80, 0.99, n).tolist()  # confident about all of it
+    accepted = [bool(rng.random() < 0.001) for _ in range(n)]
+    return variances, confidences, accepted
+
+
+def _separable(n: int = 600, seed: int = 1):
+    """Variance is uninformative but confidence tracks correctness."""
+    rng = np.random.default_rng(seed)
+    good = rng.random(n) < 0.35
+    variances = rng.uniform(0.0, 0.02, n)
+    confidences = np.where(good, rng.uniform(0.6, 0.95, n), rng.uniform(0.05, 0.5, n))
+    return variances.tolist(), confidences.tolist(), good.tolist()
+
+
+def test_printed_rule_ignores_confidence_entirely() -> None:
+    """Sec. 3.6 gates on Var(y_hat) < tau alone; this pins that reading."""
+    cfg = SafetyConfig()
+    cfg.decision_rule = "variance_only"
+    gate = BayesianGate(cfg, tau=0.10)
+    assert gate.decide(variance=0.01, confidence=0.99).accept
+    assert gate.decide(variance=0.01, confidence=0.00).accept, "confidence must not matter"
+
+
+def test_variance_alone_cannot_bound_far_when_the_head_is_confidently_wrong() -> None:
+    """The defect the guard exists to fix.
+
+    With every variance below the smallest grid point, no tau suppresses
+    anything, so FAR stays pinned near 100% across the entire grid and the
+    budget is unreachable.
+    """
+    cfg = SafetyConfig()
+    cfg.decision_rule = "variance_only"
+    variances, confidences, accepted = _confidently_wrong()
+    gate = BayesianGate(cfg)
+    _tau, trace = gate.calibrate(variances, accepted, confidences=confidences)
+    assert gate.budget_met is False
+    assert all(r["n_passed"] == len(variances) for r in trace), "every tau admits everything"
+    assert min(r["far"] for r in trace) > 0.9
+
+
+def test_guard_reaches_the_far_budget_where_the_printed_rule_cannot() -> None:
+    """Same data, two rules: the floor is what makes the budget attainable."""
+    variances, confidences, accepted = _separable()
+
+    literal = SafetyConfig()
+    literal.decision_rule = "variance_only"
+    g1 = BayesianGate(literal)
+    g1.calibrate(variances, accepted, confidences=confidences)
+    far1 = _empirical_far(g1, variances, confidences, accepted)
+
+    guarded = SafetyConfig()  # 'guarded' is the default
+    g2 = BayesianGate(guarded)
+    g2.calibrate(variances, accepted, confidences=confidences)
+    far2 = _empirical_far(g2, variances, confidences, accepted)
+
+    assert g1.budget_met is False and far1 > 0.05
+    assert g2.budget_met is True
+    assert far2 <= guarded.far_budget
+    assert g2.confidence_floor > 0.0, "the guard must actually use a floor here"
+
+
+def _empirical_far(gate: BayesianGate, variances, confidences, accepted) -> float:
+    passed = [(a) for v, c, a in zip(variances, confidences, accepted) if gate.decide(v, c).accept]
+    return (sum(1 for a in passed if not a) / len(passed)) if passed else 0.0
+
+
+def test_guard_does_not_trivially_suppress_everything() -> None:
+    """A floor of 1.0 would "meet" the budget by admitting nothing.
+
+    Calibration maximises coverage among feasible settings precisely so that
+    degenerate solution is never selected when a useful one exists.
+    """
+    variances, confidences, accepted = _separable()
+    gate = BayesianGate(SafetyConfig())
+    gate.calibrate(variances, accepted, confidences=confidences)
+    n_passed = sum(1 for v, c in zip(variances, confidences) if gate.decide(v, c).accept)
+    assert n_passed > 0.1 * len(variances), "a useful gate must still admit candidates"
+
+
+def test_unreachable_budget_falls_back_to_the_tightest_setting() -> None:
+    """Failing safe means tightening, not widening."""
+    variances, confidences, accepted = _confidently_wrong()
+    cfg = SafetyConfig()
+    gate = BayesianGate(cfg)
+    tau, _ = gate.calibrate(variances, accepted, confidences=confidences)
+    assert gate.budget_met is False
+    assert tau == pytest.approx(cfg.tau_grid_start), "tightest tau, not the default"
+    assert gate.confidence_floor == pytest.approx(cfg.floor_grid_stop), "highest floor"
+
+
+def test_strict_mode_raises_when_the_budget_is_unreachable() -> None:
+    variances, confidences, accepted = _confidently_wrong()
+    cfg = SafetyConfig()
+    cfg.strict_far_budget = True
+    with pytest.raises(FARBudgetUnreachable):
+        BayesianGate(cfg).calibrate(variances, accepted, confidences=confidences)
+
+
+def test_budget_met_is_none_before_calibration() -> None:
+    """An uncalibrated gate must not look like one that passed its budget."""
+    assert BayesianGate(SafetyConfig()).budget_met is None
+
+
+def test_guard_is_inert_without_confidences() -> None:
+    """Calibrating without confidences collapses to Sec. 3.6's 1-D sweep."""
+    rng = np.random.default_rng(3)
+    variances = rng.uniform(0.0, 0.3, 200).tolist()
+    accepted = [v < 0.1 for v in variances]
+    gate = BayesianGate(SafetyConfig())
+    gate.calibrate(variances, accepted)
+    assert gate.confidence_floor == 0.0
+
+
+def test_disabled_gate_still_presents_everything() -> None:
+    """The "\\ Bayesian Gate" ablation must not be resurrected by the guard."""
+    cfg = SafetyConfig()
+    cfg.enabled = False
+    gate = BayesianGate(cfg, tau=0.01, confidence_floor=0.9)
+    assert gate.decide(variance=99.0, confidence=0.0).accept

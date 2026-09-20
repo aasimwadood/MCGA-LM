@@ -23,7 +23,7 @@ from .memory.graph import IntentMemoryGraph, SemanticFrame
 from .memory.linearise import linearise_subgraph
 from .states import fatigue_level
 from .pipeline import MCGALM
-from .safety.gate import BayesianGate, clarification_bubbles
+from .safety.gate import BayesianGate, clarification_bubbles, retrieval_mass_ok
 
 # Depth of the ranked candidate list retained for IHR@K measurement
 # (Sec. 4.2 reports K = 1, 3, 5). Presentation is still capped at J_max.
@@ -53,6 +53,10 @@ class TurnResult:
     latency_ms: Dict[str, float] = field(default_factory=dict)
     hit_rank: Optional[int] = None  # rank of the true intent in the ranked list
     n_offered: int = 0  # how many candidates were actually presented
+    # Why the turn abstained, when it did: "all candidates dismissed"
+    # (Algorithm 1 line 23) or "retrieval below floor" (the retrieval
+    # guard fired before anything was presented). Empty on accepted turns.
+    abstain_reason: str = ""
 
 
 class AdaptiveCommunicator:
@@ -102,14 +106,25 @@ class AdaptiveCommunicator:
             persona, graph, turn, query_row, node_features, active_ids, active_names, level, rng, timings
         )
 
+        # --- retrieval floor ---------------------------------------------- #
+        # Weak retrieval is not the same failure as high predictive variance,
+        # and the gate cannot see it (the head is confidently wrong). Treat it
+        # as its own trigger for Clarification Mode. Disabled by default.
+        retrieval_ok = self._retrieval_ok(node_scores, active_ids)
+
         # --- lines 10-14: clarification loop ------------------------------ #
         forced = False
-        while candidates and self.gate.decide(variance, confidence).accept is False and c < c_max:
+        while candidates and c < c_max and (
+            not retrieval_ok or self.gate.decide(variance, confidence).accept is False
+        ):
             bubbles = clarification_bubbles(active_names, active_ids, k=3)  # line 11
             picked = self._simulated_bubble_choice(bubbles, turn, graph)  # line 12
             a += 1
             c += 1
             active_ids, active_names = self._refine(graph, active_ids, active_names, picked)  # line 13
+            # The user has just named a node, so the sub-graph is now grounded in
+            # an explicit choice rather than in attention alone.
+            retrieval_ok = True
             candidates, variance, confidence = self._propose(
                 persona, graph, turn, query_row, node_features, active_ids, active_names, level, rng, timings
             )
@@ -120,6 +135,18 @@ class AdaptiveCommunicator:
 
         # --- lines 16-22: bounded candidate presentation ------------------ #
         hit_rank = self._hit_rank(candidates, turn)
+        if not retrieval_ok:
+            # Clarification could not rescue the turn. Presenting now would
+            # spend up to J_max activations on candidates drawn from an
+            # arbitrary sub-graph, so go straight to Algorithm 1's line-23
+            # fallback and keep those activations.
+            return self._abstain(
+                a=a, c=c, variance=variance, confidence=confidence,
+                gate_accepted=gate_decision.accept or forced, forced=forced,
+                offered=[], active_names=active_names, turn=turn,
+                level=level, timings=timings, hit_rank=hit_rank,
+                reason="retrieval below floor",
+            )
         # The option set shrinks as cognitive reserves deplete (Sec. 1, 6.1),
         # bounded above by J_max (Algorithm 1 line 16).
         n_offer = max(1, min(j_max, candidates_for_fatigue(level, self.cfg.llm)))
@@ -155,6 +182,29 @@ class AdaptiveCommunicator:
 
         # --- line 23: abstain, hand over to the manual grid ---------------- #
         assert a <= c_max + j_max, "Algorithm 1 line 24 violated"
+        return self._abstain(
+            a=a, c=c, variance=variance, confidence=confidence,
+            gate_accepted=gate_decision.accept or forced, forced=forced,
+            offered=offered, active_names=active_names, turn=turn,
+            level=level, timings=timings, hit_rank=hit_rank,
+            reason="all candidates dismissed",
+        )
+
+    # ------------------------------------------------------------------ #
+    def _retrieval_ok(self, node_scores, active_ids) -> bool:
+        """Retrieval floor (see :func:`~mcga_lm.safety.gate.retrieval_mass_ok`).
+
+        Disabled by default; ``InferenceConfig.min_retrieval_mass_ratio`` says why.
+        """
+        return retrieval_mass_ok(
+            node_scores, active_ids, getattr(self.cfg.inference, "min_retrieval_mass_ratio", 0.0)
+        )
+
+    def _abstain(
+        self, *, a, c, variance, confidence, gate_accepted, forced, offered,
+        active_names, turn, level, timings, hit_rank, reason,
+    ) -> TurnResult:
+        """Algorithm 1 line 23: emit nothing and surface the manual grid."""
         first = offered[0] if offered else None
         return TurnResult(
             utterance=None,
@@ -164,7 +214,7 @@ class AdaptiveCommunicator:
             clarification_rounds=c,
             variance=variance,
             confidence=confidence,
-            gate_accepted=gate_decision.accept or forced,
+            gate_accepted=gate_accepted,
             forced=forced,
             function=first.function if first else "",
             entities=tuple(first.entities) if first else (),
@@ -176,6 +226,7 @@ class AdaptiveCommunicator:
             latency_ms=timings,
             hit_rank=hit_rank,
             n_offered=len(offered),
+            abstain_reason=reason,
         )
 
     # ------------------------------------------------------------------ #
