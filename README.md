@@ -110,11 +110,6 @@ MCGA-LM/
 │   ├── ablations/*.yaml         # the five ablations 
 │   └── baselines/*.yaml         # LLM-Only, M-LLM, RAG-LLM
 ├── data/README.md               # DOIs for MAMEM/CLAS/WESAD; nothing bundled
-├── docs/
-│   ├── ASSUMPTIONS.md           # every gap we filled, and the discrepancies
-│   ├── PAPER_MAPPING.md         # paper section → file → status
-│   ├── RESULTS.md               # measurements taken during development
-│   └── STATUS.md                # what was actually executed
 ├── scripts/                     # 11 CLI entry points
 ├── src/mcga_lm/
 │   ├── config.py                # every hyperparameter, cited to the paper
