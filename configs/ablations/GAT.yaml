@@ -1,5 +1,3 @@
-# Ablation (Sec. 4.4): no sub-graph retrieval; profile/history prompt only.
-# Functionally identical to the M-LLM baseline (Table 7 footnote).
 
 name: ablation-GAT
 seed: 1234

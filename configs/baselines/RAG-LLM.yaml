@@ -1,5 +1,3 @@
-# Baseline 4 (Sec. 4.3): queries the intent graph, fixed-temperature decoding,
-# fatigue index ignored.
 
 name: baseline-RAG-LLM
 seed: 1234

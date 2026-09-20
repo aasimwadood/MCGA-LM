@@ -1,6 +1,3 @@
-# Ablation (Sec. 4.4): late-fusion replacement for the Perceiver IO.
-# Select with `--variant '\PerceiverIO'`; the architecture swap is a code path,
-# not a config field, so this file records the intent and the shared settings.
 
 name: ablation-PerceiverIO
 seed: 1234

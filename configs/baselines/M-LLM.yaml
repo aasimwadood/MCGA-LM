@@ -1,5 +1,3 @@
-# Baseline 3 (Sec. 4.3): Perceiver IO / TFT retained, GAT-RAG memory replaced by
-# a generic prompt.
 
 name: baseline-M-LLM
 seed: 1234

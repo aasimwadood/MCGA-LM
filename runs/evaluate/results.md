@@ -27,7 +27,7 @@
 | Adaptive-grid | n/r | n/r | n/r | n/r | n/r | 1.57 ± 0.06 |
 | Non-LLM-Intent | 9 ± 5 | 36 ± 8 | 0.16 ± 0.34 | 0.28 ± 0.30 | n/r | n/r |
 
-## Held-out split (context/interlocutor/topic absent from the graph, Sec. 4.2)
+## Held-out split (context/interlocutor/topic absent from the graph)
 
 | System | Hard halluc. ↓ | Soft halluc. | IHR@3 ↑ |
 |---|---|---|---|
@@ -36,7 +36,7 @@
 | M-LLM | 14.5 ± 5.5 | 71.5 ± 8.7 | 0 ± 1 |
 | LLM-Only | 14.5 ± 5.5 | 71.6 ± 8.9 | 0 ± 1 |
 
-## Statistics (paper Sec. 4.7)
+## Statistics 
 
 Repeated-measures ANOVA on SACT: F(1.0, 19.2) = 11583.95, p = 3.56e-28, partial eta^2 = 0.998 (Greenhouse-Geisser corrected)
 

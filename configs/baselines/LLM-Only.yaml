@@ -1,5 +1,3 @@
-# Baseline 2 (Sec. 4.3): disembodied generative AI -- dialogue history and a
-# brief profile only. GPT-4o in the paper; the template backend here.
 
 name: baseline-LLM-Only
 seed: 1234

@@ -14,7 +14,7 @@ figures.
 ## What the system does
 
 One binary switch press, one whole utterance. The pipeline, per communicative
-turn (paper Sec. 3.1, Algorithm 1):
+turn :
 
 ```
  EEG · HRV · EDA          ┐
@@ -58,36 +58,33 @@ weight-free and every evaluation runs on personas generated at run time.
 ## Run it
 
 ```bash
-# 1. the persona suite (Sec. 4.1): 20 personas, ~380-node graphs
+# 1. the persona suite : 20 personas, ~380-node graphs
 python scripts/make_personas.py --out runs/ --save-graphs
 
-# 2. encoder pre-training (Sec. 3.7 stages 1–2)
+# 2. encoder pre-training 
 python scripts/pretrain_encoder.py --out runs/ --epochs 20
 
-# 3. train MCGA-LM (Sec. 3.7 stage 3) and calibrate τ per persona (Sec. 3.6)
+# 3. train MCGA-LM  and calibrate τ per persona 
 python scripts/train.py --out runs/ --pretrained runs/pretrain/encoder_pretrained.pt
 
 # 4. see a turn happen
 python scripts/demo.py --checkpoint runs/train/MCGA-LM/mcga_lm.pt --turns 5 --show-prompt
 
-# 5. the main experiment: Tables 7–8 + the Sec. 4.7 statistics
+# 5. the main experiment
 python scripts/evaluate.py --out runs/ --pretrained runs/pretrain/encoder_pretrained.pt
 
 # 6. the rest
-python scripts/run_ablations.py     --out runs/   # Sec. 4.4, Fig. 4
-python scripts/run_fatigue_study.py --out runs/   # Sec. 5.4–5.5, Fig. 5
-python scripts/run_cold_start.py    --out runs/   # Sec. 6.2, Fig. 6
-python scripts/benchmark_latency.py --out runs/   # Sec. 4.9, Table 6, Fig. 3
-python scripts/run_graph_growth.py  --out runs/   # Sec. 4.10 growth claims
-python scripts/sensitivity_grounding.py           # assumption A-30 surface
+python scripts/run_ablations.py     --out runs/   
+python scripts/run_fatigue_study.py --out runs/  
+python scripts/run_cold_start.py    --out runs/   
+python scripts/benchmark_latency.py --out runs/  
+python scripts/run_graph_growth.py  --out runs/  
+python scripts/sensitivity_grounding.py         
 ```
 
-Every experiment script takes `--quick` for a minutes-long smoke test at reduced
-size. **Quick-mode output is a smoke test, not a result.**
 
 Every experiment script also takes `--per-persona`, which fits one model per
-persona instead of one shared across all twenty. That is the configuration the
-paper describes — MCGA-LM is a personal, on-device system (Sec. 3.7) — and it is
+persona instead of one shared across all twenty.  MCGA-LM is a personal, on-device system — and it is
 the first thing to try if retrieval looks weak. It costs 20× the training time,
 which is why the shared model is the default.
 
@@ -108,9 +105,9 @@ MCGA-LM/
 ├── configs/
 │   ├── default.yaml             # the paper's hyperparameters (Table 3)
 │   ├── quick.yaml               # smoke-test sizes
-│   ├── reduced_sensors.yaml     # Sec. 4.6: EDA + PPG + gaze, no EEG
+│   ├── reduced_sensors.yaml     #  EDA + PPG + gaze, no EEG
 │   ├── llm_hf.yaml              # LLaMA-3-8B path (UNVERIFIED)
-│   ├── ablations/*.yaml         # the five ablations of Sec. 4.4
+│   ├── ablations/*.yaml         # the five ablations 
 │   └── baselines/*.yaml         # LLM-Only, M-LLM, RAG-LLM
 ├── data/README.md               # DOIs for MAMEM/CLAS/WESAD; nothing bundled
 ├── docs/
@@ -125,7 +122,7 @@ MCGA-LM/
 │   ├── inference.py             # Algorithm 1, line by line
 │   ├── losses.py                # Eqs. 9–13
 │   ├── states.py                # low/moderate/high fatigue discretisation
-│   ├── privacy.py               # Sec. 3.9: sensor toggles, crypto-erase, disclaimer
+│   ├── privacy.py               # sensor toggles, crypto-erase, disclaimer
 │   ├── models/                  # perceiver_io, tft, gat, intent_head, layers
 │   ├── memory/                  # graph, frames, linearise
 │   ├── llm/                     # prompt, template backend, HF backend

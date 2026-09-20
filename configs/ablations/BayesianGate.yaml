@@ -1,4 +1,3 @@
-# Ablation (Sec. 4.4): every utterance is presented regardless of confidence.
 
 name: ablation-BayesianGate
 seed: 1234

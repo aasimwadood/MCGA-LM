@@ -1288,30 +1288,30 @@
   },
   "claims": {
     "sublinear_node_creation": {
-      "claim": "Sec. 4.10: node creation is sub-linear in accepted utterances (alpha < 1)",
+      "claim": "node creation is sub-linear in accepted utterances (alpha < 1)",
       "mean_alpha": 0.45313027072666145,
       "max_alpha": 0.46906787578150694,
       "holds": true,
       "trivially_satisfied": false
     },
     "marginal_rate_decays": {
-      "claim": "Sec. 4.10: the marginal rate of new-node creation decays as coverage improves",
+      "claim": "the marginal rate of new-node creation decays as coverage improves",
       "mean_first_third": 0.5536000000000001,
       "mean_last_third": 0.12279999999999999,
       "holds": true
     },
     "steady_state_200_500": {
-      "claim": "Sec. 3.4 / 4.10: the graph converges to 200-500 nodes",
+      "claim": "the graph converges to 200-500 nodes",
       "final_nodes_min": 373,
       "final_nodes_max": 383,
       "holds": true
     },
     "storage_under_1mb": {
-      "claim": "Sec. 4.10: well under 1 MB per user, against ~20 MB for the LoRA adapter",
+      "claim": "well under 1 MB per user, against ~20 MB for the LoRA adapter",
       "max_storage_mb": 0.492336,
       "paper_lora_mb": 20.0,
       "holds": true
     }
   },
-  "caveat": "Sec. 4.10's own caveat applies and is the important one: these are properties of a simulation and an analytic decay model, not of longitudinal use. The persona entity pool is finite by construction, which is the saturation the sub-linearity claim assumes rather than evidence for it. Growth and drift over months of real deployment can only be established by the clinical study of Sec. 6.3."
+  "caveat":  "own caveat applies and is the important one: these are properties of a simulation and an analytic decay model, not of longitudinal use. The persona entity pool is finite by construction, which is the saturation the sub-linearity claim assumes rather than evidence for it. Growth and drift over months of real deployment can only be established by the clinical study of Sec. 6.3."
 }

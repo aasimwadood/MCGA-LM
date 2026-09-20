@@ -1,5 +1,3 @@
-# Ablation (Sec. 4.4): early concatenation + linear projection instead of the
-# cross-attention bottleneck.
 
 name: ablation-cross-attention
 seed: 1234
