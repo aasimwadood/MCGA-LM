@@ -1,0 +1,134 @@
+# Ablation (Sec. 4.4): early concatenation + linear projection instead of the
+# cross-attention bottleneck.
+
+name: ablation-cross-attention
+seed: 1234
+inputs:
+  eeg_channels: 4
+  hrv_features: 3
+  eda_features: 2
+  phys_window: 128
+  phys_rate_hz: 64
+  beh_features: 4
+  beh_window: 8
+  env_location_classes: 6
+  env_partner_classes: 8
+  env_scalars: 3
+  ling_tokens: 10
+  ling_dim: 256
+perceiver:
+  num_latents: 256
+  latent_dim: 512
+  cross_heads: 8
+  self_heads: 8
+  depth: 2
+  self_attn_per_block: 2
+  ff_mult: 2
+  dropout: 0.1
+  use_cross_attention: false
+tft:
+  window: 32
+  lstm_hidden: 128
+  attn_heads: 4
+  state_dim: 64
+  dropout: 0.1
+  enabled: true
+graph:
+  node_dim: 300
+  gat_heads: 4
+  gat_hidden: 64
+  top_k: 5
+  half_life_days: 30.0
+  prune_threshold: 0.05
+  target_nodes: 400
+  min_nodes: 200
+  max_nodes: 500
+  negative_slope: 0.2
+  dropout: 0.1
+  enabled: true
+llm:
+  backend: template
+  model_name: meta-llama/Meta-Llama-3-8B-Instruct
+  quantisation: nf4
+  lora_rank: 16
+  lora_alpha: 32
+  lora_dropout: 0.05
+  lora_targets:
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  - gate_proj
+  top_p: 0.9
+  temp_low_fatigue: 1.2
+  temp_high_fatigue: 0.5
+  history_turns: 10
+  max_new_tokens: 24
+  max_words_by_fatigue:
+    low: 14
+    moderate: 9
+    high: 5
+  candidates_by_fatigue:
+    low: 3
+    moderate: 2
+    high: 1
+  use_graph_prompt: true
+  template_global_prior: 0.2
+  template_grounded_gain: 4.0
+safety:
+  mc_passes: 20
+  tau_default: 0.15
+  tau_grid_start: 0.02
+  tau_grid_stop: 0.3
+  tau_grid_step: 0.02
+  tau_init: 0.05
+  far_budget: 0.05
+  calibration_samples: 50
+  dropout_p: 0.1
+  enabled: true
+inference:
+  c_max: 2
+  j_max: 3
+  scan_select_seconds: 4.2
+loss:
+  lambda_contrastive: 0.5
+  lambda_recon: 0.3
+  lambda_intent: 1.0
+  contrastive_temp: 0.07
+  recon_hidden: 256
+  recon_layers: 3
+training:
+  epochs: 100
+  batch_size: 128
+  lr: 0.0001
+  weight_decay: 0.01
+  optimiser: adamw
+  scheduler: cosine
+  lora_epochs: 3
+  grad_clip: 1.0
+  device: auto
+  num_workers: 0
+simulation:
+  n_personas: 20
+  n_als: 10
+  n_cerebral_palsy: 6
+  n_brainstem_stroke: 4
+  turns_per_session: 60
+  session_minutes: 60.0
+  seeds:
+  - 0
+  - 1
+  - 2
+  - 3
+  - 4
+  fatigue_half_life_min: 30.0
+  fatigue_peak: 0.8
+  fatigue_noise: 0.02
+  user_accept_threshold: 0.55
+  reduced_sensor_set: false
+evaluation:
+  words_per_turn_overhead_s: 1.0
+  ece_bins: 10
+  bootstrap_iters: 10000
+  holm_alpha: 0.05
+output_dir: runs

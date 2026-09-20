@@ -1,0 +1,4 @@
+transformers>=4.40
+peft>=0.10
+accelerate>=0.29
+bitsandbytes>=0.43  # NF4 quantisation; Linux/CUDA only

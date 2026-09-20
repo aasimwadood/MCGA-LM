@@ -1,0 +1,1317 @@
+{
+  "provenance": "These numbers are produced by an independent re-implementation running on synthetic personas with a weight-free template language backend by default. They are NOT the paper's reported results and must not be presented as a reproduction of them.",
+  "settings": {
+    "utterances": 1500,
+    "days": 180.0,
+    "personas": 5,
+    "from_intake": true,
+    "intake_nodes": 25
+  },
+  "per_persona": [
+    {
+      "persona": "P00",
+      "nodes_start": 26,
+      "nodes_final": 377,
+      "edges_final": 1330,
+      "storage_mb": 0.48432,
+      "growth_exponent_alpha": 0.4538328405464597,
+      "marginal_new_nodes_first_third": 0.542,
+      "marginal_new_nodes_last_third": 0.126,
+      "tail_slope_nodes_per_mark": -0.3212121212121048,
+      "in_paper_steady_state": true,
+      "under_1mb": true
+    },
+    {
+      "persona": "P01",
+      "nodes_start": 26,
+      "nodes_final": 375,
+      "edges_final": 1347,
+      "storage_mb": 0.482328,
+      "growth_exponent_alpha": 0.46906787578150694,
+      "marginal_new_nodes_first_third": 0.542,
+      "marginal_new_nodes_last_third": 0.12400000000000003,
+      "tail_slope_nodes_per_mark": -0.6484848484848469,
+      "in_paper_steady_state": true,
+      "under_1mb": true
+    },
+    {
+      "persona": "P02",
+      "nodes_start": 26,
+      "nodes_final": 383,
+      "edges_final": 1364,
+      "storage_mb": 0.492336,
+      "growth_exponent_alpha": 0.4562850573974799,
+      "marginal_new_nodes_first_third": 0.562,
+      "marginal_new_nodes_last_third": 0.134,
+      "tail_slope_nodes_per_mark": 0.10909090909090505,
+      "in_paper_steady_state": true,
+      "under_1mb": true
+    },
+    {
+      "persona": "P03",
+      "nodes_start": 26,
+      "nodes_final": 373,
+      "edges_final": 1337,
+      "storage_mb": 0.479688,
+      "growth_exponent_alpha": 0.44498468949849945,
+      "marginal_new_nodes_first_third": 0.5700000000000001,
+      "marginal_new_nodes_last_third": 0.11200000000000002,
+      "tail_slope_nodes_per_mark": 0.8181818181818216,
+      "in_paper_steady_state": true,
+      "under_1mb": true
+    },
+    {
+      "persona": "P04",
+      "nodes_start": 26,
+      "nodes_final": 377,
+      "edges_final": 1353,
+      "storage_mb": 0.484872,
+      "growth_exponent_alpha": 0.4414808904093612,
+      "marginal_new_nodes_first_third": 0.552,
+      "marginal_new_nodes_last_third": 0.11800000000000002,
+      "tail_slope_nodes_per_mark": 0.4909090909090929,
+      "in_paper_steady_state": true,
+      "under_1mb": true
+    }
+  ],
+  "curves": {
+    "P00": [
+      {
+        "utterances": 50.0,
+        "day": 6.0,
+        "n_nodes": 75,
+        "n_edges": 192,
+        "storage_mb": 0.094608,
+        "marginal_new_nodes_per_utterance": 0.98
+      },
+      {
+        "utterances": 100.0,
+        "day": 12.0,
+        "n_nodes": 113,
+        "n_edges": 318,
+        "storage_mb": 0.143232,
+        "marginal_new_nodes_per_utterance": 0.76
+      },
+      {
+        "utterances": 150.0,
+        "day": 18.0,
+        "n_nodes": 148,
+        "n_edges": 437,
+        "storage_mb": 0.188088,
+        "marginal_new_nodes_per_utterance": 0.7
+      },
+      {
+        "utterances": 200.0,
+        "day": 24.0,
+        "n_nodes": 183,
+        "n_edges": 556,
+        "storage_mb": 0.232944,
+        "marginal_new_nodes_per_utterance": 0.7
+      },
+      {
+        "utterances": 250.0,
+        "day": 30.0,
+        "n_nodes": 209,
+        "n_edges": 652,
+        "storage_mb": 0.266448,
+        "marginal_new_nodes_per_utterance": 0.52
+      },
+      {
+        "utterances": 300.0,
+        "day": 36.0,
+        "n_nodes": 237,
+        "n_edges": 758,
+        "storage_mb": 0.302592,
+        "marginal_new_nodes_per_utterance": 0.56
+      },
+      {
+        "utterances": 350.0,
+        "day": 42.0,
+        "n_nodes": 261,
+        "n_edges": 854,
+        "storage_mb": 0.333696,
+        "marginal_new_nodes_per_utterance": 0.48
+      },
+      {
+        "utterances": 400.0,
+        "day": 48.0,
+        "n_nodes": 275,
+        "n_edges": 926,
+        "storage_mb": 0.352224,
+        "marginal_new_nodes_per_utterance": 0.28
+      },
+      {
+        "utterances": 450.0,
+        "day": 54.0,
+        "n_nodes": 287,
+        "n_edges": 995,
+        "storage_mb": 0.36828,
+        "marginal_new_nodes_per_utterance": 0.24
+      },
+      {
+        "utterances": 500.0,
+        "day": 60.0,
+        "n_nodes": 297,
+        "n_edges": 1056,
+        "storage_mb": 0.381744,
+        "marginal_new_nodes_per_utterance": 0.2
+      },
+      {
+        "utterances": 550.0,
+        "day": 66.0,
+        "n_nodes": 309,
+        "n_edges": 1123,
+        "storage_mb": 0.397752,
+        "marginal_new_nodes_per_utterance": 0.24
+      },
+      {
+        "utterances": 600.0,
+        "day": 72.0,
+        "n_nodes": 319,
+        "n_edges": 1184,
+        "storage_mb": 0.411216,
+        "marginal_new_nodes_per_utterance": 0.2
+      },
+      {
+        "utterances": 650.0,
+        "day": 78.0,
+        "n_nodes": 329,
+        "n_edges": 1238,
+        "storage_mb": 0.424512,
+        "marginal_new_nodes_per_utterance": 0.2
+      },
+      {
+        "utterances": 700.0,
+        "day": 84.0,
+        "n_nodes": 345,
+        "n_edges": 1269,
+        "storage_mb": 0.444456,
+        "marginal_new_nodes_per_utterance": 0.32
+      },
+      {
+        "utterances": 750.0,
+        "day": 90.0,
+        "n_nodes": 359,
+        "n_edges": 1302,
+        "storage_mb": 0.462048,
+        "marginal_new_nodes_per_utterance": 0.28
+      },
+      {
+        "utterances": 800.0,
+        "day": 96.0,
+        "n_nodes": 364,
+        "n_edges": 1293,
+        "storage_mb": 0.467832,
+        "marginal_new_nodes_per_utterance": 0.1
+      },
+      {
+        "utterances": 850.0,
+        "day": 102.0,
+        "n_nodes": 369,
+        "n_edges": 1314,
+        "storage_mb": 0.474336,
+        "marginal_new_nodes_per_utterance": 0.2
+      },
+      {
+        "utterances": 900.0,
+        "day": 108.0,
+        "n_nodes": 368,
+        "n_edges": 1316,
+        "storage_mb": 0.473184,
+        "marginal_new_nodes_per_utterance": 0.14
+      },
+      {
+        "utterances": 950.0,
+        "day": 114.0,
+        "n_nodes": 373,
+        "n_edges": 1324,
+        "storage_mb": 0.479376,
+        "marginal_new_nodes_per_utterance": 0.16
+      },
+      {
+        "utterances": 1000.0,
+        "day": 120.0,
+        "n_nodes": 373,
+        "n_edges": 1328,
+        "storage_mb": 0.479472,
+        "marginal_new_nodes_per_utterance": 0.08
+      },
+      {
+        "utterances": 1050.0,
+        "day": 126.0,
+        "n_nodes": 377,
+        "n_edges": 1328,
+        "storage_mb": 0.484272,
+        "marginal_new_nodes_per_utterance": 0.22
+      },
+      {
+        "utterances": 1100.0,
+        "day": 132.0,
+        "n_nodes": 378,
+        "n_edges": 1340,
+        "storage_mb": 0.48576,
+        "marginal_new_nodes_per_utterance": 0.14
+      },
+      {
+        "utterances": 1150.0,
+        "day": 138.0,
+        "n_nodes": 380,
+        "n_edges": 1343,
+        "storage_mb": 0.488232,
+        "marginal_new_nodes_per_utterance": 0.12
+      },
+      {
+        "utterances": 1200.0,
+        "day": 144.0,
+        "n_nodes": 381,
+        "n_edges": 1347,
+        "storage_mb": 0.489528,
+        "marginal_new_nodes_per_utterance": 0.06
+      },
+      {
+        "utterances": 1250.0,
+        "day": 150.0,
+        "n_nodes": 375,
+        "n_edges": 1335,
+        "storage_mb": 0.48204,
+        "marginal_new_nodes_per_utterance": 0.04
+      },
+      {
+        "utterances": 1300.0,
+        "day": 156.0,
+        "n_nodes": 377,
+        "n_edges": 1337,
+        "storage_mb": 0.484488,
+        "marginal_new_nodes_per_utterance": 0.1
+      },
+      {
+        "utterances": 1350.0,
+        "day": 162.0,
+        "n_nodes": 375,
+        "n_edges": 1337,
+        "storage_mb": 0.482088,
+        "marginal_new_nodes_per_utterance": 0.12
+      },
+      {
+        "utterances": 1400.0,
+        "day": 168.0,
+        "n_nodes": 374,
+        "n_edges": 1331,
+        "storage_mb": 0.480744,
+        "marginal_new_nodes_per_utterance": 0.12
+      },
+      {
+        "utterances": 1450.0,
+        "day": 174.0,
+        "n_nodes": 377,
+        "n_edges": 1336,
+        "storage_mb": 0.484464,
+        "marginal_new_nodes_per_utterance": 0.16
+      },
+      {
+        "utterances": 1500.0,
+        "day": 180.0,
+        "n_nodes": 377,
+        "n_edges": 1330,
+        "storage_mb": 0.48432,
+        "marginal_new_nodes_per_utterance": 0.18
+      }
+    ],
+    "P01": [
+      {
+        "utterances": 50.0,
+        "day": 6.0,
+        "n_nodes": 75,
+        "n_edges": 194,
+        "storage_mb": 0.094656,
+        "marginal_new_nodes_per_utterance": 0.98
+      },
+      {
+        "utterances": 100.0,
+        "day": 12.0,
+        "n_nodes": 111,
+        "n_edges": 318,
+        "storage_mb": 0.140832,
+        "marginal_new_nodes_per_utterance": 0.72
+      },
+      {
+        "utterances": 150.0,
+        "day": 18.0,
+        "n_nodes": 144,
+        "n_edges": 431,
+        "storage_mb": 0.183144,
+        "marginal_new_nodes_per_utterance": 0.66
+      },
+      {
+        "utterances": 200.0,
+        "day": 24.0,
+        "n_nodes": 172,
+        "n_edges": 535,
+        "storage_mb": 0.21924,
+        "marginal_new_nodes_per_utterance": 0.56
+      },
+      {
+        "utterances": 250.0,
+        "day": 30.0,
+        "n_nodes": 201,
+        "n_edges": 637,
+        "storage_mb": 0.256488,
+        "marginal_new_nodes_per_utterance": 0.58
+      },
+      {
+        "utterances": 300.0,
+        "day": 36.0,
+        "n_nodes": 227,
+        "n_edges": 732,
+        "storage_mb": 0.289968,
+        "marginal_new_nodes_per_utterance": 0.52
+      },
+      {
+        "utterances": 350.0,
+        "day": 42.0,
+        "n_nodes": 247,
+        "n_edges": 818,
+        "storage_mb": 0.316032,
+        "marginal_new_nodes_per_utterance": 0.4
+      },
+      {
+        "utterances": 400.0,
+        "day": 48.0,
+        "n_nodes": 262,
+        "n_edges": 892,
+        "storage_mb": 0.335808,
+        "marginal_new_nodes_per_utterance": 0.3
+      },
+      {
+        "utterances": 450.0,
+        "day": 54.0,
+        "n_nodes": 280,
+        "n_edges": 968,
+        "storage_mb": 0.359232,
+        "marginal_new_nodes_per_utterance": 0.36
+      },
+      {
+        "utterances": 500.0,
+        "day": 60.0,
+        "n_nodes": 297,
+        "n_edges": 1045,
+        "storage_mb": 0.38148,
+        "marginal_new_nodes_per_utterance": 0.34
+      },
+      {
+        "utterances": 550.0,
+        "day": 66.0,
+        "n_nodes": 316,
+        "n_edges": 1128,
+        "storage_mb": 0.406272,
+        "marginal_new_nodes_per_utterance": 0.38
+      },
+      {
+        "utterances": 600.0,
+        "day": 72.0,
+        "n_nodes": 329,
+        "n_edges": 1194,
+        "storage_mb": 0.423456,
+        "marginal_new_nodes_per_utterance": 0.26
+      },
+      {
+        "utterances": 650.0,
+        "day": 78.0,
+        "n_nodes": 336,
+        "n_edges": 1247,
+        "storage_mb": 0.433128,
+        "marginal_new_nodes_per_utterance": 0.14
+      },
+      {
+        "utterances": 700.0,
+        "day": 84.0,
+        "n_nodes": 352,
+        "n_edges": 1280,
+        "storage_mb": 0.45312,
+        "marginal_new_nodes_per_utterance": 0.32
+      },
+      {
+        "utterances": 750.0,
+        "day": 90.0,
+        "n_nodes": 358,
+        "n_edges": 1286,
+        "storage_mb": 0.460464,
+        "marginal_new_nodes_per_utterance": 0.12
+      },
+      {
+        "utterances": 800.0,
+        "day": 96.0,
+        "n_nodes": 364,
+        "n_edges": 1296,
+        "storage_mb": 0.467904,
+        "marginal_new_nodes_per_utterance": 0.12
+      },
+      {
+        "utterances": 850.0,
+        "day": 102.0,
+        "n_nodes": 362,
+        "n_edges": 1302,
+        "storage_mb": 0.465648,
+        "marginal_new_nodes_per_utterance": 0.12
+      },
+      {
+        "utterances": 900.0,
+        "day": 108.0,
+        "n_nodes": 366,
+        "n_edges": 1316,
+        "storage_mb": 0.470784,
+        "marginal_new_nodes_per_utterance": 0.1
+      },
+      {
+        "utterances": 950.0,
+        "day": 114.0,
+        "n_nodes": 375,
+        "n_edges": 1346,
+        "storage_mb": 0.482304,
+        "marginal_new_nodes_per_utterance": 0.28
+      },
+      {
+        "utterances": 1000.0,
+        "day": 120.0,
+        "n_nodes": 376,
+        "n_edges": 1351,
+        "storage_mb": 0.483624,
+        "marginal_new_nodes_per_utterance": 0.12
+      },
+      {
+        "utterances": 1050.0,
+        "day": 126.0,
+        "n_nodes": 378,
+        "n_edges": 1351,
+        "storage_mb": 0.486024,
+        "marginal_new_nodes_per_utterance": 0.12
+      },
+      {
+        "utterances": 1100.0,
+        "day": 132.0,
+        "n_nodes": 384,
+        "n_edges": 1370,
+        "storage_mb": 0.49368,
+        "marginal_new_nodes_per_utterance": 0.22
+      },
+      {
+        "utterances": 1150.0,
+        "day": 138.0,
+        "n_nodes": 385,
+        "n_edges": 1369,
+        "storage_mb": 0.494856,
+        "marginal_new_nodes_per_utterance": 0.12
+      },
+      {
+        "utterances": 1200.0,
+        "day": 144.0,
+        "n_nodes": 382,
+        "n_edges": 1365,
+        "storage_mb": 0.49116,
+        "marginal_new_nodes_per_utterance": 0.14
+      },
+      {
+        "utterances": 1250.0,
+        "day": 150.0,
+        "n_nodes": 381,
+        "n_edges": 1364,
+        "storage_mb": 0.489936,
+        "marginal_new_nodes_per_utterance": 0.12
+      },
+      {
+        "utterances": 1300.0,
+        "day": 156.0,
+        "n_nodes": 380,
+        "n_edges": 1352,
+        "storage_mb": 0.488448,
+        "marginal_new_nodes_per_utterance": 0.12
+      },
+      {
+        "utterances": 1350.0,
+        "day": 162.0,
+        "n_nodes": 382,
+        "n_edges": 1360,
+        "storage_mb": 0.49104,
+        "marginal_new_nodes_per_utterance": 0.14
+      },
+      {
+        "utterances": 1400.0,
+        "day": 168.0,
+        "n_nodes": 379,
+        "n_edges": 1356,
+        "storage_mb": 0.487344,
+        "marginal_new_nodes_per_utterance": 0.12
+      },
+      {
+        "utterances": 1450.0,
+        "day": 174.0,
+        "n_nodes": 377,
+        "n_edges": 1356,
+        "storage_mb": 0.484944,
+        "marginal_new_nodes_per_utterance": 0.06
+      },
+      {
+        "utterances": 1500.0,
+        "day": 180.0,
+        "n_nodes": 375,
+        "n_edges": 1347,
+        "storage_mb": 0.482328,
+        "marginal_new_nodes_per_utterance": 0.08
+      }
+    ],
+    "P02": [
+      {
+        "utterances": 50.0,
+        "day": 6.0,
+        "n_nodes": 73,
+        "n_edges": 194,
+        "storage_mb": 0.092256,
+        "marginal_new_nodes_per_utterance": 0.94
+      },
+      {
+        "utterances": 100.0,
+        "day": 12.0,
+        "n_nodes": 112,
+        "n_edges": 324,
+        "storage_mb": 0.142176,
+        "marginal_new_nodes_per_utterance": 0.78
+      },
+      {
+        "utterances": 150.0,
+        "day": 18.0,
+        "n_nodes": 150,
+        "n_edges": 451,
+        "storage_mb": 0.190824,
+        "marginal_new_nodes_per_utterance": 0.76
+      },
+      {
+        "utterances": 200.0,
+        "day": 24.0,
+        "n_nodes": 184,
+        "n_edges": 571,
+        "storage_mb": 0.234504,
+        "marginal_new_nodes_per_utterance": 0.68
+      },
+      {
+        "utterances": 250.0,
+        "day": 30.0,
+        "n_nodes": 211,
+        "n_edges": 670,
+        "storage_mb": 0.26928,
+        "marginal_new_nodes_per_utterance": 0.54
+      },
+      {
+        "utterances": 300.0,
+        "day": 36.0,
+        "n_nodes": 234,
+        "n_edges": 759,
+        "storage_mb": 0.299016,
+        "marginal_new_nodes_per_utterance": 0.46
+      },
+      {
+        "utterances": 350.0,
+        "day": 42.0,
+        "n_nodes": 256,
+        "n_edges": 847,
+        "storage_mb": 0.327528,
+        "marginal_new_nodes_per_utterance": 0.44
+      },
+      {
+        "utterances": 400.0,
+        "day": 48.0,
+        "n_nodes": 275,
+        "n_edges": 932,
+        "storage_mb": 0.352368,
+        "marginal_new_nodes_per_utterance": 0.38
+      },
+      {
+        "utterances": 450.0,
+        "day": 54.0,
+        "n_nodes": 293,
+        "n_edges": 1014,
+        "storage_mb": 0.375936,
+        "marginal_new_nodes_per_utterance": 0.36
+      },
+      {
+        "utterances": 500.0,
+        "day": 60.0,
+        "n_nodes": 307,
+        "n_edges": 1084,
+        "storage_mb": 0.394416,
+        "marginal_new_nodes_per_utterance": 0.28
+      },
+      {
+        "utterances": 550.0,
+        "day": 66.0,
+        "n_nodes": 318,
+        "n_edges": 1143,
+        "storage_mb": 0.409032,
+        "marginal_new_nodes_per_utterance": 0.22
+      },
+      {
+        "utterances": 600.0,
+        "day": 72.0,
+        "n_nodes": 322,
+        "n_edges": 1193,
+        "storage_mb": 0.415032,
+        "marginal_new_nodes_per_utterance": 0.08
+      },
+      {
+        "utterances": 650.0,
+        "day": 78.0,
+        "n_nodes": 333,
+        "n_edges": 1253,
+        "storage_mb": 0.429672,
+        "marginal_new_nodes_per_utterance": 0.22
+      },
+      {
+        "utterances": 700.0,
+        "day": 84.0,
+        "n_nodes": 345,
+        "n_edges": 1272,
+        "storage_mb": 0.444528,
+        "marginal_new_nodes_per_utterance": 0.24
+      },
+      {
+        "utterances": 750.0,
+        "day": 90.0,
+        "n_nodes": 354,
+        "n_edges": 1281,
+        "storage_mb": 0.455544,
+        "marginal_new_nodes_per_utterance": 0.18
+      },
+      {
+        "utterances": 800.0,
+        "day": 96.0,
+        "n_nodes": 364,
+        "n_edges": 1296,
+        "storage_mb": 0.467904,
+        "marginal_new_nodes_per_utterance": 0.2
+      },
+      {
+        "utterances": 850.0,
+        "day": 102.0,
+        "n_nodes": 363,
+        "n_edges": 1297,
+        "storage_mb": 0.466728,
+        "marginal_new_nodes_per_utterance": 0.16
+      },
+      {
+        "utterances": 900.0,
+        "day": 108.0,
+        "n_nodes": 367,
+        "n_edges": 1310,
+        "storage_mb": 0.47184,
+        "marginal_new_nodes_per_utterance": 0.12
+      },
+      {
+        "utterances": 950.0,
+        "day": 114.0,
+        "n_nodes": 366,
+        "n_edges": 1317,
+        "storage_mb": 0.470808,
+        "marginal_new_nodes_per_utterance": 0.08
+      },
+      {
+        "utterances": 1000.0,
+        "day": 120.0,
+        "n_nodes": 371,
+        "n_edges": 1330,
+        "storage_mb": 0.47712,
+        "marginal_new_nodes_per_utterance": 0.18
+      },
+      {
+        "utterances": 1050.0,
+        "day": 126.0,
+        "n_nodes": 379,
+        "n_edges": 1339,
+        "storage_mb": 0.486936,
+        "marginal_new_nodes_per_utterance": 0.2
+      },
+      {
+        "utterances": 1100.0,
+        "day": 132.0,
+        "n_nodes": 380,
+        "n_edges": 1338,
+        "storage_mb": 0.488112,
+        "marginal_new_nodes_per_utterance": 0.12
+      },
+      {
+        "utterances": 1150.0,
+        "day": 138.0,
+        "n_nodes": 380,
+        "n_edges": 1349,
+        "storage_mb": 0.488376,
+        "marginal_new_nodes_per_utterance": 0.12
+      },
+      {
+        "utterances": 1200.0,
+        "day": 144.0,
+        "n_nodes": 376,
+        "n_edges": 1352,
+        "storage_mb": 0.483648,
+        "marginal_new_nodes_per_utterance": 0.16
+      },
+      {
+        "utterances": 1250.0,
+        "day": 150.0,
+        "n_nodes": 376,
+        "n_edges": 1352,
+        "storage_mb": 0.483648,
+        "marginal_new_nodes_per_utterance": 0.12
+      },
+      {
+        "utterances": 1300.0,
+        "day": 156.0,
+        "n_nodes": 371,
+        "n_edges": 1342,
+        "storage_mb": 0.477408,
+        "marginal_new_nodes_per_utterance": 0.04
+      },
+      {
+        "utterances": 1350.0,
+        "day": 162.0,
+        "n_nodes": 375,
+        "n_edges": 1361,
+        "storage_mb": 0.482664,
+        "marginal_new_nodes_per_utterance": 0.18
+      },
+      {
+        "utterances": 1400.0,
+        "day": 168.0,
+        "n_nodes": 378,
+        "n_edges": 1375,
+        "storage_mb": 0.4866,
+        "marginal_new_nodes_per_utterance": 0.16
+      },
+      {
+        "utterances": 1450.0,
+        "day": 174.0,
+        "n_nodes": 380,
+        "n_edges": 1364,
+        "storage_mb": 0.488736,
+        "marginal_new_nodes_per_utterance": 0.08
+      },
+      {
+        "utterances": 1500.0,
+        "day": 180.0,
+        "n_nodes": 383,
+        "n_edges": 1364,
+        "storage_mb": 0.492336,
+        "marginal_new_nodes_per_utterance": 0.16
+      }
+    ],
+    "P03": [
+      {
+        "utterances": 50.0,
+        "day": 6.0,
+        "n_nodes": 77,
+        "n_edges": 195,
+        "storage_mb": 0.09708,
+        "marginal_new_nodes_per_utterance": 1.02
+      },
+      {
+        "utterances": 100.0,
+        "day": 12.0,
+        "n_nodes": 116,
+        "n_edges": 323,
+        "storage_mb": 0.146952,
+        "marginal_new_nodes_per_utterance": 0.78
+      },
+      {
+        "utterances": 150.0,
+        "day": 18.0,
+        "n_nodes": 149,
+        "n_edges": 434,
+        "storage_mb": 0.189216,
+        "marginal_new_nodes_per_utterance": 0.66
+      },
+      {
+        "utterances": 200.0,
+        "day": 24.0,
+        "n_nodes": 182,
+        "n_edges": 548,
+        "storage_mb": 0.231552,
+        "marginal_new_nodes_per_utterance": 0.66
+      },
+      {
+        "utterances": 250.0,
+        "day": 30.0,
+        "n_nodes": 209,
+        "n_edges": 652,
+        "storage_mb": 0.266448,
+        "marginal_new_nodes_per_utterance": 0.54
+      },
+      {
+        "utterances": 300.0,
+        "day": 36.0,
+        "n_nodes": 232,
+        "n_edges": 740,
+        "storage_mb": 0.29616,
+        "marginal_new_nodes_per_utterance": 0.46
+      },
+      {
+        "utterances": 350.0,
+        "day": 42.0,
+        "n_nodes": 256,
+        "n_edges": 833,
+        "storage_mb": 0.327192,
+        "marginal_new_nodes_per_utterance": 0.48
+      },
+      {
+        "utterances": 400.0,
+        "day": 48.0,
+        "n_nodes": 278,
+        "n_edges": 921,
+        "storage_mb": 0.355704,
+        "marginal_new_nodes_per_utterance": 0.44
+      },
+      {
+        "utterances": 450.0,
+        "day": 54.0,
+        "n_nodes": 295,
+        "n_edges": 996,
+        "storage_mb": 0.377904,
+        "marginal_new_nodes_per_utterance": 0.34
+      },
+      {
+        "utterances": 500.0,
+        "day": 60.0,
+        "n_nodes": 311,
+        "n_edges": 1069,
+        "storage_mb": 0.398856,
+        "marginal_new_nodes_per_utterance": 0.32
+      },
+      {
+        "utterances": 550.0,
+        "day": 66.0,
+        "n_nodes": 326,
+        "n_edges": 1137,
+        "storage_mb": 0.418488,
+        "marginal_new_nodes_per_utterance": 0.3
+      },
+      {
+        "utterances": 600.0,
+        "day": 72.0,
+        "n_nodes": 338,
+        "n_edges": 1199,
+        "storage_mb": 0.434376,
+        "marginal_new_nodes_per_utterance": 0.24
+      },
+      {
+        "utterances": 650.0,
+        "day": 78.0,
+        "n_nodes": 346,
+        "n_edges": 1255,
+        "storage_mb": 0.44532,
+        "marginal_new_nodes_per_utterance": 0.16
+      },
+      {
+        "utterances": 700.0,
+        "day": 84.0,
+        "n_nodes": 357,
+        "n_edges": 1279,
+        "storage_mb": 0.459096,
+        "marginal_new_nodes_per_utterance": 0.22
+      },
+      {
+        "utterances": 750.0,
+        "day": 90.0,
+        "n_nodes": 366,
+        "n_edges": 1299,
+        "storage_mb": 0.470376,
+        "marginal_new_nodes_per_utterance": 0.18
+      },
+      {
+        "utterances": 800.0,
+        "day": 96.0,
+        "n_nodes": 378,
+        "n_edges": 1310,
+        "storage_mb": 0.48504,
+        "marginal_new_nodes_per_utterance": 0.24
+      },
+      {
+        "utterances": 850.0,
+        "day": 102.0,
+        "n_nodes": 377,
+        "n_edges": 1303,
+        "storage_mb": 0.483672,
+        "marginal_new_nodes_per_utterance": 0.08
+      },
+      {
+        "utterances": 900.0,
+        "day": 108.0,
+        "n_nodes": 371,
+        "n_edges": 1297,
+        "storage_mb": 0.476328,
+        "marginal_new_nodes_per_utterance": 0.1
+      },
+      {
+        "utterances": 950.0,
+        "day": 114.0,
+        "n_nodes": 366,
+        "n_edges": 1293,
+        "storage_mb": 0.470232,
+        "marginal_new_nodes_per_utterance": 0.06
+      },
+      {
+        "utterances": 1000.0,
+        "day": 120.0,
+        "n_nodes": 366,
+        "n_edges": 1301,
+        "storage_mb": 0.470424,
+        "marginal_new_nodes_per_utterance": 0.14
+      },
+      {
+        "utterances": 1050.0,
+        "day": 126.0,
+        "n_nodes": 370,
+        "n_edges": 1310,
+        "storage_mb": 0.47544,
+        "marginal_new_nodes_per_utterance": 0.14
+      },
+      {
+        "utterances": 1100.0,
+        "day": 132.0,
+        "n_nodes": 365,
+        "n_edges": 1311,
+        "storage_mb": 0.469464,
+        "marginal_new_nodes_per_utterance": 0.06
+      },
+      {
+        "utterances": 1150.0,
+        "day": 138.0,
+        "n_nodes": 370,
+        "n_edges": 1325,
+        "storage_mb": 0.4758,
+        "marginal_new_nodes_per_utterance": 0.14
+      },
+      {
+        "utterances": 1200.0,
+        "day": 144.0,
+        "n_nodes": 373,
+        "n_edges": 1338,
+        "storage_mb": 0.479712,
+        "marginal_new_nodes_per_utterance": 0.16
+      },
+      {
+        "utterances": 1250.0,
+        "day": 150.0,
+        "n_nodes": 370,
+        "n_edges": 1344,
+        "storage_mb": 0.476256,
+        "marginal_new_nodes_per_utterance": 0.08
+      },
+      {
+        "utterances": 1300.0,
+        "day": 156.0,
+        "n_nodes": 377,
+        "n_edges": 1357,
+        "storage_mb": 0.484968,
+        "marginal_new_nodes_per_utterance": 0.16
+      },
+      {
+        "utterances": 1350.0,
+        "day": 162.0,
+        "n_nodes": 375,
+        "n_edges": 1348,
+        "storage_mb": 0.482352,
+        "marginal_new_nodes_per_utterance": 0.1
+      },
+      {
+        "utterances": 1400.0,
+        "day": 168.0,
+        "n_nodes": 375,
+        "n_edges": 1352,
+        "storage_mb": 0.482448,
+        "marginal_new_nodes_per_utterance": 0.1
+      },
+      {
+        "utterances": 1450.0,
+        "day": 174.0,
+        "n_nodes": 375,
+        "n_edges": 1349,
+        "storage_mb": 0.482376,
+        "marginal_new_nodes_per_utterance": 0.08
+      },
+      {
+        "utterances": 1500.0,
+        "day": 180.0,
+        "n_nodes": 373,
+        "n_edges": 1337,
+        "storage_mb": 0.479688,
+        "marginal_new_nodes_per_utterance": 0.1
+      }
+    ],
+    "P04": [
+      {
+        "utterances": 50.0,
+        "day": 6.0,
+        "n_nodes": 78,
+        "n_edges": 197,
+        "storage_mb": 0.098328,
+        "marginal_new_nodes_per_utterance": 1.04
+      },
+      {
+        "utterances": 100.0,
+        "day": 12.0,
+        "n_nodes": 118,
+        "n_edges": 326,
+        "storage_mb": 0.149424,
+        "marginal_new_nodes_per_utterance": 0.8
+      },
+      {
+        "utterances": 150.0,
+        "day": 18.0,
+        "n_nodes": 151,
+        "n_edges": 439,
+        "storage_mb": 0.191736,
+        "marginal_new_nodes_per_utterance": 0.66
+      },
+      {
+        "utterances": 200.0,
+        "day": 24.0,
+        "n_nodes": 185,
+        "n_edges": 554,
+        "storage_mb": 0.235296,
+        "marginal_new_nodes_per_utterance": 0.68
+      },
+      {
+        "utterances": 250.0,
+        "day": 30.0,
+        "n_nodes": 212,
+        "n_edges": 657,
+        "storage_mb": 0.270168,
+        "marginal_new_nodes_per_utterance": 0.54
+      },
+      {
+        "utterances": 300.0,
+        "day": 36.0,
+        "n_nodes": 241,
+        "n_edges": 761,
+        "storage_mb": 0.307464,
+        "marginal_new_nodes_per_utterance": 0.58
+      },
+      {
+        "utterances": 350.0,
+        "day": 42.0,
+        "n_nodes": 258,
+        "n_edges": 839,
+        "storage_mb": 0.329736,
+        "marginal_new_nodes_per_utterance": 0.34
+      },
+      {
+        "utterances": 400.0,
+        "day": 48.0,
+        "n_nodes": 278,
+        "n_edges": 926,
+        "storage_mb": 0.355824,
+        "marginal_new_nodes_per_utterance": 0.4
+      },
+      {
+        "utterances": 450.0,
+        "day": 54.0,
+        "n_nodes": 288,
+        "n_edges": 988,
+        "storage_mb": 0.369312,
+        "marginal_new_nodes_per_utterance": 0.2
+      },
+      {
+        "utterances": 500.0,
+        "day": 60.0,
+        "n_nodes": 302,
+        "n_edges": 1060,
+        "storage_mb": 0.38784,
+        "marginal_new_nodes_per_utterance": 0.28
+      },
+      {
+        "utterances": 550.0,
+        "day": 66.0,
+        "n_nodes": 318,
+        "n_edges": 1135,
+        "storage_mb": 0.40884,
+        "marginal_new_nodes_per_utterance": 0.32
+      },
+      {
+        "utterances": 600.0,
+        "day": 72.0,
+        "n_nodes": 330,
+        "n_edges": 1203,
+        "storage_mb": 0.424872,
+        "marginal_new_nodes_per_utterance": 0.24
+      },
+      {
+        "utterances": 650.0,
+        "day": 78.0,
+        "n_nodes": 341,
+        "n_edges": 1263,
+        "storage_mb": 0.439512,
+        "marginal_new_nodes_per_utterance": 0.22
+      },
+      {
+        "utterances": 700.0,
+        "day": 84.0,
+        "n_nodes": 353,
+        "n_edges": 1293,
+        "storage_mb": 0.454632,
+        "marginal_new_nodes_per_utterance": 0.24
+      },
+      {
+        "utterances": 750.0,
+        "day": 90.0,
+        "n_nodes": 366,
+        "n_edges": 1312,
+        "storage_mb": 0.470688,
+        "marginal_new_nodes_per_utterance": 0.26
+      },
+      {
+        "utterances": 800.0,
+        "day": 96.0,
+        "n_nodes": 372,
+        "n_edges": 1324,
+        "storage_mb": 0.478176,
+        "marginal_new_nodes_per_utterance": 0.12
+      },
+      {
+        "utterances": 850.0,
+        "day": 102.0,
+        "n_nodes": 372,
+        "n_edges": 1321,
+        "storage_mb": 0.478104,
+        "marginal_new_nodes_per_utterance": 0.1
+      },
+      {
+        "utterances": 900.0,
+        "day": 108.0,
+        "n_nodes": 370,
+        "n_edges": 1318,
+        "storage_mb": 0.475632,
+        "marginal_new_nodes_per_utterance": 0.08
+      },
+      {
+        "utterances": 950.0,
+        "day": 114.0,
+        "n_nodes": 368,
+        "n_edges": 1320,
+        "storage_mb": 0.47328,
+        "marginal_new_nodes_per_utterance": 0.14
+      },
+      {
+        "utterances": 1000.0,
+        "day": 120.0,
+        "n_nodes": 369,
+        "n_edges": 1320,
+        "storage_mb": 0.47448,
+        "marginal_new_nodes_per_utterance": 0.14
+      },
+      {
+        "utterances": 1050.0,
+        "day": 126.0,
+        "n_nodes": 375,
+        "n_edges": 1331,
+        "storage_mb": 0.481944,
+        "marginal_new_nodes_per_utterance": 0.2
+      },
+      {
+        "utterances": 1100.0,
+        "day": 132.0,
+        "n_nodes": 371,
+        "n_edges": 1332,
+        "storage_mb": 0.477168,
+        "marginal_new_nodes_per_utterance": 0.08
+      },
+      {
+        "utterances": 1150.0,
+        "day": 138.0,
+        "n_nodes": 374,
+        "n_edges": 1330,
+        "storage_mb": 0.48072,
+        "marginal_new_nodes_per_utterance": 0.16
+      },
+      {
+        "utterances": 1200.0,
+        "day": 144.0,
+        "n_nodes": 373,
+        "n_edges": 1333,
+        "storage_mb": 0.479592,
+        "marginal_new_nodes_per_utterance": 0.08
+      },
+      {
+        "utterances": 1250.0,
+        "day": 150.0,
+        "n_nodes": 380,
+        "n_edges": 1347,
+        "storage_mb": 0.488328,
+        "marginal_new_nodes_per_utterance": 0.2
+      },
+      {
+        "utterances": 1300.0,
+        "day": 156.0,
+        "n_nodes": 375,
+        "n_edges": 1339,
+        "storage_mb": 0.482136,
+        "marginal_new_nodes_per_utterance": 0.06
+      },
+      {
+        "utterances": 1350.0,
+        "day": 162.0,
+        "n_nodes": 376,
+        "n_edges": 1343,
+        "storage_mb": 0.483432,
+        "marginal_new_nodes_per_utterance": 0.08
+      },
+      {
+        "utterances": 1400.0,
+        "day": 168.0,
+        "n_nodes": 376,
+        "n_edges": 1344,
+        "storage_mb": 0.483456,
+        "marginal_new_nodes_per_utterance": 0.14
+      },
+      {
+        "utterances": 1450.0,
+        "day": 174.0,
+        "n_nodes": 378,
+        "n_edges": 1357,
+        "storage_mb": 0.486168,
+        "marginal_new_nodes_per_utterance": 0.12
+      },
+      {
+        "utterances": 1500.0,
+        "day": 180.0,
+        "n_nodes": 377,
+        "n_edges": 1353,
+        "storage_mb": 0.484872,
+        "marginal_new_nodes_per_utterance": 0.06
+      }
+    ]
+  },
+  "claims": {
+    "sublinear_node_creation": {
+      "claim": "Sec. 4.10: node creation is sub-linear in accepted utterances (alpha < 1)",
+      "mean_alpha": 0.45313027072666145,
+      "max_alpha": 0.46906787578150694,
+      "holds": true,
+      "trivially_satisfied": false
+    },
+    "marginal_rate_decays": {
+      "claim": "Sec. 4.10: the marginal rate of new-node creation decays as coverage improves",
+      "mean_first_third": 0.5536000000000001,
+      "mean_last_third": 0.12279999999999999,
+      "holds": true
+    },
+    "steady_state_200_500": {
+      "claim": "Sec. 3.4 / 4.10: the graph converges to 200-500 nodes",
+      "final_nodes_min": 373,
+      "final_nodes_max": 383,
+      "holds": true
+    },
+    "storage_under_1mb": {
+      "claim": "Sec. 4.10: well under 1 MB per user, against ~20 MB for the LoRA adapter",
+      "max_storage_mb": 0.492336,
+      "paper_lora_mb": 20.0,
+      "holds": true
+    }
+  },
+  "caveat": "Sec. 4.10's own caveat applies and is the important one: these are properties of a simulation and an analytic decay model, not of longitudinal use. The persona entity pool is finite by construction, which is the saturation the sub-linearity claim assumes rather than evidence for it. Growth and drift over months of real deployment can only be established by the clinical study of Sec. 6.3."
+}

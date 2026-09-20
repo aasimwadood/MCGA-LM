@@ -1,0 +1,3454 @@
+{
+  "config": {
+    "name": "mcga-lm",
+    "seed": 1234,
+    "inputs": {
+      "eeg_channels": 4,
+      "hrv_features": 3,
+      "eda_features": 2,
+      "phys_window": 32,
+      "phys_rate_hz": 64,
+      "beh_features": 4,
+      "beh_window": 8,
+      "env_location_classes": 6,
+      "env_partner_classes": 8,
+      "env_scalars": 3,
+      "ling_tokens": 10,
+      "ling_dim": 256
+    },
+    "perceiver": {
+      "num_latents": 32,
+      "latent_dim": 128,
+      "cross_heads": 8,
+      "self_heads": 8,
+      "depth": 1,
+      "self_attn_per_block": 1,
+      "ff_mult": 2,
+      "dropout": 0.1,
+      "use_cross_attention": true
+    },
+    "tft": {
+      "window": 8,
+      "lstm_hidden": 128,
+      "attn_heads": 4,
+      "state_dim": 32,
+      "dropout": 0.1,
+      "enabled": true
+    },
+    "graph": {
+      "node_dim": 300,
+      "gat_heads": 4,
+      "gat_hidden": 32,
+      "top_k": 5,
+      "half_life_days": 30.0,
+      "prune_threshold": 0.05,
+      "target_nodes": 400,
+      "min_nodes": 200,
+      "max_nodes": 500,
+      "negative_slope": 0.2,
+      "dropout": 0.1,
+      "enabled": true
+    },
+    "llm": {
+      "backend": "template",
+      "model_name": "meta-llama/Meta-Llama-3-8B-Instruct",
+      "quantisation": "nf4",
+      "lora_rank": 16,
+      "lora_alpha": 32,
+      "lora_dropout": 0.05,
+      "lora_targets": [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj"
+      ],
+      "top_p": 0.9,
+      "temp_low_fatigue": 1.2,
+      "temp_high_fatigue": 0.5,
+      "history_turns": 10,
+      "max_new_tokens": 24,
+      "max_words_by_fatigue": {
+        "low": 14,
+        "moderate": 9,
+        "high": 5
+      },
+      "candidates_by_fatigue": {
+        "low": 3,
+        "moderate": 2,
+        "high": 1
+      },
+      "use_graph_prompt": true,
+      "template_global_prior": 0.2,
+      "template_grounded_gain": 4.0
+    },
+    "safety": {
+      "mc_passes": 8,
+      "tau_default": 0.15,
+      "tau_grid_start": 0.02,
+      "tau_grid_stop": 0.3,
+      "tau_grid_step": 0.02,
+      "tau_init": 0.05,
+      "far_budget": 0.05,
+      "calibration_samples": 50,
+      "dropout_p": 0.1,
+      "enabled": true
+    },
+    "inference": {
+      "c_max": 2,
+      "j_max": 3,
+      "scan_select_seconds": 4.2
+    },
+    "loss": {
+      "lambda_contrastive": 0.5,
+      "lambda_recon": 0.3,
+      "lambda_intent": 1.0,
+      "contrastive_temp": 0.07,
+      "recon_hidden": 256,
+      "recon_layers": 3
+    },
+    "training": {
+      "epochs": 100,
+      "batch_size": 128,
+      "lr": 0.0001,
+      "weight_decay": 0.01,
+      "optimiser": "adamw",
+      "scheduler": "cosine",
+      "lora_epochs": 1,
+      "grad_clip": 1.0,
+      "device": "auto",
+      "num_workers": 0
+    },
+    "simulation": {
+      "n_personas": 20,
+      "n_als": 10,
+      "n_cerebral_palsy": 6,
+      "n_brainstem_stroke": 4,
+      "turns_per_session": 20,
+      "session_minutes": 60.0,
+      "seeds": [
+        0,
+        1
+      ],
+      "fatigue_half_life_min": 30.0,
+      "fatigue_peak": 0.8,
+      "fatigue_noise": 0.02,
+      "user_accept_threshold": 0.55,
+      "reduced_sensor_set": false
+    },
+    "evaluation": {
+      "words_per_turn_overhead_s": 1.0,
+      "ece_bins": 10,
+      "bootstrap_iters": 10000,
+      "holm_alpha": 0.05
+    },
+    "output_dir": "runs/"
+  },
+  "provenance": "These numbers are produced by an independent re-implementation running on synthetic personas with a weight-free template language backend by default. They are NOT the paper's reported results and must not be presented as a reproduction of them.",
+  "results": {
+    "MCGA-LM": {
+      "aggregate": {
+        "abstention": {
+          "mean": 0.99875,
+          "sd": 0.0055901699437494795,
+          "n": 20
+        },
+        "acceptance": {
+          "mean": 0.00125,
+          "sd": 0.005590169943749475,
+          "n": 20
+        },
+        "bleu4": {
+          "mean": NaN,
+          "sd": NaN,
+          "n": 0
+        },
+        "ece": {
+          "mean": 0.0019453026165138,
+          "sd": 0.005435495003031132,
+          "n": 20
+        },
+        "far": {
+          "mean": 0.99875,
+          "sd": 0.0055901699437494795,
+          "n": 20
+        },
+        "hallucination_hard": {
+          "mean": 0.0425,
+          "sd": 0.02702338168872906,
+          "n": 20
+        },
+        "hallucination_soft": {
+          "mean": 0.11875,
+          "sd": 0.05841942268944825,
+          "n": 20
+        },
+        "ihr@1": {
+          "mean": 0.00125,
+          "sd": 0.005590169943749475,
+          "n": 20
+        },
+        "ihr@3": {
+          "mean": 0.00125,
+          "sd": 0.005590169943749475,
+          "n": 20
+        },
+        "ihr@5": {
+          "mean": 0.00125,
+          "sd": 0.005590169943749475,
+          "n": 20
+        },
+        "itr_intent": {
+          "mean": 8.272179668475099,
+          "sd": 0.37757118984670035,
+          "n": 20
+        },
+        "kspc": {
+          "mean": NaN,
+          "sd": NaN,
+          "n": 0
+        },
+        "mean_clarifications": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "rouge_l": {
+          "mean": NaN,
+          "sd": NaN,
+          "n": 0
+        },
+        "sact": {
+          "mean": 2.3575000000000004,
+          "sd": 0.023084512921915892,
+          "n": 20,
+          "median": 2.35,
+          "q1": 2.35,
+          "q3": 2.375
+        },
+        "wpm": {
+          "mean": 0.04139834406623734,
+          "sd": 0.1851390229760635,
+          "n": 20
+        }
+      },
+      "per_persona": {
+        "P00": {
+          "sact": 2.4,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.025,
+          "hallucination_soft": 0.225,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0007458363266778178,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P01": {
+          "sact": 2.375,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.2,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0007335920352488756,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P02": {
+          "sact": 2.325,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.1,
+          "hallucination_soft": 0.125,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0007276402000570669,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P03": {
+          "sact": 2.35,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.05,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0007024837279459462,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P04": {
+          "sact": 2.4,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.15,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0007533718628110365,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P05": {
+          "sact": 2.35,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.05,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0007082349766278639,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P06": {
+          "sact": 2.375,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.05,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0007242457373649812,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P07": {
+          "sact": 2.325,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.07500000000000001,
+          "hallucination_soft": 0.1,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0007045601145364344,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P08": {
+          "sact": 2.375,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.05,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0007378774826065637,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P09": {
+          "sact": 2.375,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.025,
+          "hallucination_soft": 0.07500000000000001,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0007381977906334214,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P10": {
+          "sact": 2.325,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.125,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0007156335137551651,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P11": {
+          "sact": 2.35,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.025,
+          "hallucination_soft": 0.07500000000000001,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0007247189540066756,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P12": {
+          "sact": 2.35,
+          "wpm": 0.8279668813247468,
+          "kspc": NaN,
+          "ihr@1": 0.025,
+          "ihr@3": 0.025,
+          "ihr@5": 0.025,
+          "hallucination_hard": 0.025,
+          "hallucination_soft": 0.175,
+          "far": 0.975,
+          "abstention": 0.975,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.025038069032598288,
+          "itr_intent": 6.668057459473971,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.025
+        },
+        "P13": {
+          "sact": 2.35,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.025,
+          "hallucination_soft": 0.22499999999999998,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0007462410721927881,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P14": {
+          "sact": 2.35,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.07500000000000001,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0007326476901653223,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P15": {
+          "sact": 2.375,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.15000000000000002,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0007290725785424002,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P16": {
+          "sact": 2.35,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.175,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0007294162351172417,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P17": {
+          "sact": 2.375,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.075,
+          "hallucination_soft": 0.125,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0007608137442730367,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P18": {
+          "sact": 2.325,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.1,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0007175326347351075,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P19": {
+          "sact": 2.3499999999999996,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.075,
+          "hallucination_soft": 0.075,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0007358666203799657,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        }
+      }
+    },
+    "RAG-LLM": {
+      "aggregate": {
+        "abstention": {
+          "mean": 0.99875,
+          "sd": 0.0055901699437494795,
+          "n": 20
+        },
+        "acceptance": {
+          "mean": 0.00125,
+          "sd": 0.005590169943749475,
+          "n": 20
+        },
+        "bleu4": {
+          "mean": NaN,
+          "sd": NaN,
+          "n": 0
+        },
+        "ece": {
+          "mean": 0.0018620221517994654,
+          "sd": 0.005444866576692612,
+          "n": 20
+        },
+        "far": {
+          "mean": 0.99875,
+          "sd": 0.0055901699437494795,
+          "n": 20
+        },
+        "hallucination_hard": {
+          "mean": 0.04000000000000001,
+          "sd": 0.02615741818902985,
+          "n": 20
+        },
+        "hallucination_soft": {
+          "mean": 0.11750000000000001,
+          "sd": 0.05006574624799296,
+          "n": 20
+        },
+        "ihr@1": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "ihr@3": {
+          "mean": 0.00125,
+          "sd": 0.005590169943749475,
+          "n": 20
+        },
+        "ihr@5": {
+          "mean": 0.00125,
+          "sd": 0.005590169943749475,
+          "n": 20
+        },
+        "itr_intent": {
+          "mean": 8.272179668475099,
+          "sd": 0.37757118984670035,
+          "n": 20
+        },
+        "kspc": {
+          "mean": NaN,
+          "sd": NaN,
+          "n": 0
+        },
+        "mean_clarifications": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "rouge_l": {
+          "mean": NaN,
+          "sd": NaN,
+          "n": 0
+        },
+        "sact": {
+          "mean": 2.9987500000000002,
+          "sd": 0.005590169943749455,
+          "n": 20,
+          "median": 3.0,
+          "q1": 3.0,
+          "q3": 3.0
+        },
+        "wpm": {
+          "mean": 0.06161314413741599,
+          "sd": 0.2755423571975096,
+          "n": 20
+        }
+      },
+      "per_persona": {
+        "P00": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.125,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0006582838497706689,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P01": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.025,
+          "hallucination_soft": 0.175,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0006437050775275566,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P02": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.07500000000000001,
+          "hallucination_soft": 0.15000000000000002,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.000656438761507161,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P03": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.075,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0006376516495947727,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P04": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.125,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0006449710221204441,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P05": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.05,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0006337264203466475,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P06": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.1,
+          "hallucination_soft": 0.07500000000000001,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0006417623080778867,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P07": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.075,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0006332909310003742,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P08": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.025,
+          "hallucination_soft": 0.1,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0006385624859831296,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P09": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.15,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0006549492551130243,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P10": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.07500000000000001,
+          "hallucination_soft": 0.15,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0006480447467765772,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P11": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.1,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0006307241157628596,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P12": {
+          "sact": 2.975,
+          "wpm": 1.2322628827483197,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.025,
+          "ihr@5": 0.025,
+          "hallucination_hard": 0.025,
+          "hallucination_soft": 0.22499999999999998,
+          "far": 0.975,
+          "abstention": 0.975,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.02499467042653123,
+          "itr_intent": 6.668057459473971,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.025
+        },
+        "P13": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.025,
+          "hallucination_soft": 0.2,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0006560283625731244,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P14": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.07500000000000001,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0006460295000579209,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P15": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.025,
+          "hallucination_soft": 0.1,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0006368881891830825,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P16": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.025,
+          "hallucination_soft": 0.175,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0006418084012693726,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P17": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.1,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0006493141641840338,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P18": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.05,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0006523778502014466,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P19": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.075,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0006412155184079893,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        }
+      }
+    },
+    "M-LLM": {
+      "aggregate": {
+        "abstention": {
+          "mean": 0.99875,
+          "sd": 0.0055901699437494795,
+          "n": 20
+        },
+        "acceptance": {
+          "mean": 0.00125,
+          "sd": 0.005590169943749475,
+          "n": 20
+        },
+        "bleu4": {
+          "mean": NaN,
+          "sd": NaN,
+          "n": 0
+        },
+        "ece": {
+          "mean": 0.001411009932626257,
+          "sd": 0.00555306147027362,
+          "n": 20
+        },
+        "far": {
+          "mean": 0.99875,
+          "sd": 0.0055901699437494795,
+          "n": 20
+        },
+        "hallucination_hard": {
+          "mean": 0.10374999999999998,
+          "sd": 0.048173890067240016,
+          "n": 20
+        },
+        "hallucination_soft": {
+          "mean": 0.39,
+          "sd": 0.07317966355412367,
+          "n": 20
+        },
+        "ihr@1": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "ihr@3": {
+          "mean": 0.00125,
+          "sd": 0.005590169943749475,
+          "n": 20
+        },
+        "ihr@5": {
+          "mean": 0.00125,
+          "sd": 0.005590169943749475,
+          "n": 20
+        },
+        "itr_intent": {
+          "mean": 8.272179668475099,
+          "sd": 0.37757118984670035,
+          "n": 20
+        },
+        "kspc": {
+          "mean": NaN,
+          "sd": NaN,
+          "n": 0
+        },
+        "mean_clarifications": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "rouge_l": {
+          "mean": NaN,
+          "sd": NaN,
+          "n": 0
+        },
+        "sact": {
+          "mean": 2.35625,
+          "sd": 0.02674809388191591,
+          "n": 20,
+          "median": 2.35,
+          "q1": 2.34375,
+          "q3": 2.375
+        },
+        "wpm": {
+          "mean": 0.07177033492822964,
+          "sd": 0.32096669533489786,
+          "n": 20
+        }
+      },
+      "per_persona": {
+        "P00": {
+          "sact": 2.4,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.125,
+          "hallucination_soft": 0.375,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00016526323215657613,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P01": {
+          "sact": 2.375,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.15,
+          "hallucination_soft": 0.425,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.000166341358635691,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P02": {
+          "sact": 2.325,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.025,
+          "ihr@5": 0.025,
+          "hallucination_hard": 0.1,
+          "hallucination_soft": 0.375,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0001634306649066275,
+          "itr_intent": 6.668057459473971,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P03": {
+          "sact": 2.35,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.15,
+          "hallucination_soft": 0.32499999999999996,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00016287308717437553,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P04": {
+          "sact": 2.4,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.15000000000000002,
+          "hallucination_soft": 0.35,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00017762081170076273,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P05": {
+          "sact": 2.35,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.125,
+          "hallucination_soft": 0.3,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00017128408871940336,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P06": {
+          "sact": 2.375,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.125,
+          "hallucination_soft": 0.45,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00017928430715983266,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P07": {
+          "sact": 2.325,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.1,
+          "hallucination_soft": 0.375,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00017392587087670106,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P08": {
+          "sact": 2.375,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.125,
+          "hallucination_soft": 0.47500000000000003,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.000164705551287625,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P09": {
+          "sact": 2.375,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.07500000000000001,
+          "hallucination_soft": 0.375,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00018787176286423347,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P10": {
+          "sact": 2.325,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.125,
+          "hallucination_soft": 0.275,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00016279112842312318,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P11": {
+          "sact": 2.35,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.325,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00017121254477387994,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P12": {
+          "sact": 2.375,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.47500000000000003,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00016357963977498002,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P13": {
+          "sact": 2.35,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.175,
+          "hallucination_soft": 0.425,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0001753433125486481,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P14": {
+          "sact": 2.3,
+          "wpm": 1.4354066985645928,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.025,
+          "hallucination_soft": 0.45,
+          "far": 0.975,
+          "abstention": 0.975,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.025003336405097797,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.025
+        },
+        "P15": {
+          "sact": 2.375,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.125,
+          "hallucination_soft": 0.42500000000000004,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00016957510397332955,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P16": {
+          "sact": 2.35,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.025,
+          "hallucination_soft": 0.30000000000000004,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0001664789790083887,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P17": {
+          "sact": 2.375,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.575,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00016356422456738074,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P18": {
+          "sact": 2.325,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.375,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00016383904749091017,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P19": {
+          "sact": 2.3499999999999996,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.175,
+          "hallucination_soft": 0.35,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0001678775313848746,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        }
+      }
+    },
+    "LLM-Only": {
+      "aggregate": {
+        "abstention": {
+          "mean": 0.99875,
+          "sd": 0.0055901699437494795,
+          "n": 20
+        },
+        "acceptance": {
+          "mean": 0.00125,
+          "sd": 0.005590169943749475,
+          "n": 20
+        },
+        "bleu4": {
+          "mean": NaN,
+          "sd": NaN,
+          "n": 0
+        },
+        "ece": {
+          "mean": 0.001429289875577524,
+          "sd": 0.005547983657962674,
+          "n": 20
+        },
+        "far": {
+          "mean": 0.99875,
+          "sd": 0.0055901699437494795,
+          "n": 20
+        },
+        "hallucination_hard": {
+          "mean": 0.10374999999999998,
+          "sd": 0.048173890067240016,
+          "n": 20
+        },
+        "hallucination_soft": {
+          "mean": 0.39125,
+          "sd": 0.0744607809167809,
+          "n": 20
+        },
+        "ihr@1": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "ihr@3": {
+          "mean": 0.00125,
+          "sd": 0.005590169943749475,
+          "n": 20
+        },
+        "ihr@5": {
+          "mean": 0.00125,
+          "sd": 0.005590169943749475,
+          "n": 20
+        },
+        "itr_intent": {
+          "mean": 8.272179668475099,
+          "sd": 0.37757118984670035,
+          "n": 20
+        },
+        "kspc": {
+          "mean": NaN,
+          "sd": NaN,
+          "n": 0
+        },
+        "mean_clarifications": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "rouge_l": {
+          "mean": NaN,
+          "sd": NaN,
+          "n": 0
+        },
+        "sact": {
+          "mean": 2.3487500000000003,
+          "sd": 0.02864827541424656,
+          "n": 20,
+          "median": 2.35,
+          "q1": 2.325,
+          "q3": 2.375
+        },
+        "wpm": {
+          "mean": 0.07177033492822964,
+          "sd": 0.32096669533489786,
+          "n": 20
+        }
+      },
+      "per_persona": {
+        "P00": {
+          "sact": 2.35,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.125,
+          "hallucination_soft": 0.375,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0001919194430229254,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P01": {
+          "sact": 2.35,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.15,
+          "hallucination_soft": 0.425,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00018572991830296816,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P02": {
+          "sact": 2.325,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.025,
+          "ihr@5": 0.025,
+          "hallucination_hard": 0.1,
+          "hallucination_soft": 0.375,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00019034494252991865,
+          "itr_intent": 6.668057459473971,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P03": {
+          "sact": 2.35,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.15,
+          "hallucination_soft": 0.32499999999999996,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00018233399132441263,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P04": {
+          "sact": 2.4,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.15000000000000002,
+          "hallucination_soft": 0.35,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00019202109069738071,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P05": {
+          "sact": 2.35,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.125,
+          "hallucination_soft": 0.3,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0001881119762401795,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P06": {
+          "sact": 2.375,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.125,
+          "hallucination_soft": 0.45,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00018745954585028813,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P07": {
+          "sact": 2.325,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.1,
+          "hallucination_soft": 0.375,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0001974783623154508,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P08": {
+          "sact": 2.375,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.125,
+          "hallucination_soft": 0.47500000000000003,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0001902751206216635,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P09": {
+          "sact": 2.375,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.07500000000000001,
+          "hallucination_soft": 0.375,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00019165612357028292,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P10": {
+          "sact": 2.325,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.125,
+          "hallucination_soft": 0.275,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00019073533367190975,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P11": {
+          "sact": 2.35,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.325,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00019183062649972272,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P12": {
+          "sact": 2.375,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.47500000000000003,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00018457478981872554,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P13": {
+          "sact": 2.35,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.175,
+          "hallucination_soft": 0.425,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00019289328083686995,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P14": {
+          "sact": 2.275,
+          "wpm": 1.4354066985645928,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.025,
+          "hallucination_soft": 0.47500000000000003,
+          "far": 0.975,
+          "abstention": 0.975,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.025000053771509555,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.025
+        },
+        "P15": {
+          "sact": 2.375,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.125,
+          "hallucination_soft": 0.42500000000000004,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00019249225624662358,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P16": {
+          "sact": 2.325,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.025,
+          "hallucination_soft": 0.30000000000000004,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00018493199677322992,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P17": {
+          "sact": 2.375,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.575,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0001824062564992346,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P18": {
+          "sact": 2.325,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.05,
+          "hallucination_soft": 0.375,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.00018422420835122465,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        },
+        "P19": {
+          "sact": 2.325,
+          "wpm": 0.0,
+          "kspc": NaN,
+          "ihr@1": 0.0,
+          "ihr@3": 0.0,
+          "ihr@5": 0.0,
+          "hallucination_hard": 0.175,
+          "hallucination_soft": 0.35,
+          "far": 1.0,
+          "abstention": 1.0,
+          "bleu4": NaN,
+          "rouge_l": NaN,
+          "ece": 0.0001843244768679142,
+          "itr_intent": 8.356607153159372,
+          "mean_clarifications": 0.0,
+          "acceptance": 0.0
+        }
+      }
+    },
+    "TouchChat": {
+      "aggregate": {
+        "acceptance": {
+          "mean": 1.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "far": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "hallucination_hard": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "hallucination_soft": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "kspc": {
+          "mean": 0.5832137373966887,
+          "sd": 0.027178984685930017,
+          "n": 20
+        },
+        "sact": {
+          "mean": 15.510000000000002,
+          "sd": 0.5310367218940703,
+          "n": 20,
+          "median": 15.649999999999999,
+          "q1": 15.175,
+          "q3": 15.85
+        },
+        "wpm": {
+          "mean": 12.535311923626328,
+          "sd": 0.23151449245382405,
+          "n": 20
+        }
+      },
+      "per_persona": {
+        "P00": {
+          "sact": 16.1,
+          "wpm": 12.592924157124761,
+          "kspc": 0.5930340226501104,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.0,
+          "acceptance": 1.0
+        },
+        "P01": {
+          "sact": 15.25,
+          "wpm": 12.496408011460662,
+          "kspc": 0.5928710008749571,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.0,
+          "acceptance": 1.0
+        },
+        "P02": {
+          "sact": 15.8,
+          "wpm": 12.25391824412991,
+          "kspc": 0.5853750818062827,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.0,
+          "acceptance": 1.0
+        },
+        "P03": {
+          "sact": 15.25,
+          "wpm": 12.41843312177786,
+          "kspc": 0.5594831666616312,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.0,
+          "acceptance": 1.0
+        },
+        "P04": {
+          "sact": 15.5,
+          "wpm": 12.43229698370034,
+          "kspc": 0.5810691601976006,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.0,
+          "acceptance": 1.0
+        },
+        "P05": {
+          "sact": 15.2,
+          "wpm": 12.679486469335773,
+          "kspc": 0.5630469616664613,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.0,
+          "acceptance": 1.0
+        },
+        "P06": {
+          "sact": 14.55,
+          "wpm": 12.740718332934101,
+          "kspc": 0.5551214801483659,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.0,
+          "acceptance": 1.0
+        },
+        "P07": {
+          "sact": 15.05,
+          "wpm": 12.816502565896347,
+          "kspc": 0.5703181255220484,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.0,
+          "acceptance": 1.0
+        },
+        "P08": {
+          "sact": 14.5,
+          "wpm": 12.954068895503585,
+          "kspc": 0.5385691446842527,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.0,
+          "acceptance": 1.0
+        },
+        "P09": {
+          "sact": 16.35,
+          "wpm": 12.289164935819562,
+          "kspc": 0.6060296144781894,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.0,
+          "acceptance": 1.0
+        },
+        "P10": {
+          "sact": 16.049999999999997,
+          "wpm": 12.583895752923503,
+          "kspc": 0.5895232626498776,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.0,
+          "acceptance": 1.0
+        },
+        "P11": {
+          "sact": 15.850000000000001,
+          "wpm": 12.48788524907928,
+          "kspc": 0.6004849911037135,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.0,
+          "acceptance": 1.0
+        },
+        "P12": {
+          "sact": 15.85,
+          "wpm": 12.171655795573853,
+          "kspc": 0.6051172474249398,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.0,
+          "acceptance": 1.0
+        },
+        "P13": {
+          "sact": 15.8,
+          "wpm": 12.330068970320088,
+          "kspc": 0.6335354103099406,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.0,
+          "acceptance": 1.0
+        },
+        "P14": {
+          "sact": 15.7,
+          "wpm": 12.824950513539594,
+          "kspc": 0.6101596429070026,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.0,
+          "acceptance": 1.0
+        },
+        "P15": {
+          "sact": 14.8,
+          "wpm": 12.631035596602754,
+          "kspc": 0.5480619356610705,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.0,
+          "acceptance": 1.0
+        },
+        "P16": {
+          "sact": 15.6,
+          "wpm": 12.630363011316378,
+          "kspc": 0.6203282109656612,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.0,
+          "acceptance": 1.0
+        },
+        "P17": {
+          "sact": 15.100000000000001,
+          "wpm": 12.801122457520963,
+          "kspc": 0.5345901901262182,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.0,
+          "acceptance": 1.0
+        },
+        "P18": {
+          "sact": 15.7,
+          "wpm": 12.118735094394584,
+          "kspc": 0.5769093360296595,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.0,
+          "acceptance": 1.0
+        },
+        "P19": {
+          "sact": 16.200000000000003,
+          "wpm": 12.452604313572659,
+          "kspc": 0.6006467620657896,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.0,
+          "acceptance": 1.0
+        }
+      }
+    },
+    "Static-WP-bigram": {
+      "aggregate": {
+        "acceptance": {
+          "mean": 1.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "far": {
+          "mean": 0.04000000000000001,
+          "sd": 7.119154932824459e-18,
+          "n": 20
+        },
+        "hallucination_hard": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "hallucination_soft": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "kspc": {
+          "mean": 1.106060856115902,
+          "sd": 0.026650277964075195,
+          "n": 20
+        },
+        "sact": {
+          "mean": NaN,
+          "sd": NaN,
+          "n": 0,
+          "median": NaN,
+          "q1": NaN,
+          "q3": NaN
+        },
+        "wpm": {
+          "mean": 6.0273454048565815,
+          "sd": 0.29833638717305666,
+          "n": 20
+        }
+      },
+      "per_persona": {
+        "P00": {
+          "sact": NaN,
+          "wpm": 6.169172932330827,
+          "kspc": 1.104625330271713,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P01": {
+          "sact": NaN,
+          "wpm": 5.775435359762408,
+          "kspc": 1.1630577852170274,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P02": {
+          "sact": NaN,
+          "wpm": 5.6795527156549515,
+          "kspc": 1.1321853184991273,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P03": {
+          "sact": NaN,
+          "wpm": 5.68649543439953,
+          "kspc": 1.1218264398723024,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P04": {
+          "sact": NaN,
+          "wpm": 5.7135376999238385,
+          "kspc": 1.1559633027522935,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P05": {
+          "sact": NaN,
+          "wpm": 5.865614617940199,
+          "kspc": 1.1121793554925565,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P06": {
+          "sact": NaN,
+          "wpm": 5.877787001897533,
+          "kspc": 1.1108501781416207,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P07": {
+          "sact": NaN,
+          "wpm": 6.0094055289960515,
+          "kspc": 1.1174645007056654,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P08": {
+          "sact": NaN,
+          "wpm": 5.794643754396543,
+          "kspc": 1.1118208881170926,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P09": {
+          "sact": NaN,
+          "wpm": 6.145876288659794,
+          "kspc": 1.093077983424375,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P10": {
+          "sact": NaN,
+          "wpm": 6.214685314685315,
+          "kspc": 1.0841160466483464,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P11": {
+          "sact": NaN,
+          "wpm": 6.297700123491508,
+          "kspc": 1.0833094185846295,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P12": {
+          "sact": NaN,
+          "wpm": 6.0616001457991615,
+          "kspc": 1.0965921542844619,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P13": {
+          "sact": NaN,
+          "wpm": 6.439655172413794,
+          "kspc": 1.1025774851453347,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P14": {
+          "sact": NaN,
+          "wpm": 6.781522150700492,
+          "kspc": 1.0564579725237615,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P15": {
+          "sact": NaN,
+          "wpm": 5.779610194902549,
+          "kspc": 1.09207608061249,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P16": {
+          "sact": NaN,
+          "wpm": 6.460344158364601,
+          "kspc": 1.1074906722317082,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P17": {
+          "sact": NaN,
+          "wpm": 5.899359743897559,
+          "kspc": 1.0621505032752836,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P18": {
+          "sact": NaN,
+          "wpm": 5.827653526047197,
+          "kspc": 1.087431749241658,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P19": {
+          "sact": NaN,
+          "wpm": 6.067256232867772,
+          "kspc": 1.1259639572765887,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        }
+      }
+    },
+    "Adaptive-grid": {
+      "aggregate": {
+        "acceptance": {
+          "mean": 1.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "far": {
+          "mean": 0.04000000000000001,
+          "sd": 7.119154932824459e-18,
+          "n": 20
+        },
+        "hallucination_hard": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "hallucination_soft": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "kspc": {
+          "mean": 1.5707552153398041,
+          "sd": 0.05875151968564599,
+          "n": 20
+        },
+        "sact": {
+          "mean": NaN,
+          "sd": NaN,
+          "n": 0,
+          "median": NaN,
+          "q1": NaN,
+          "q3": NaN
+        },
+        "wpm": {
+          "mean": 4.255063782614668,
+          "sd": 0.24393253438051707,
+          "n": 20
+        }
+      },
+      "per_persona": {
+        "P00": {
+          "sact": NaN,
+          "wpm": 4.045698924731183,
+          "kspc": 1.6849708139862227,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P01": {
+          "sact": NaN,
+          "wpm": 4.173026346686704,
+          "kspc": 1.6102864533799977,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P02": {
+          "sact": NaN,
+          "wpm": 3.8373651996502476,
+          "kspc": 1.6757130780977314,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P03": {
+          "sact": NaN,
+          "wpm": 3.9850823692152915,
+          "kspc": 1.603049437545948,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P04": {
+          "sact": NaN,
+          "wpm": 4.309350152448138,
+          "kspc": 1.5406845448129851,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P05": {
+          "sact": NaN,
+          "wpm": 4.236805555555556,
+          "kspc": 1.540627525096895,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P06": {
+          "sact": NaN,
+          "wpm": 4.473978014428031,
+          "kspc": 1.4593712734748223,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P07": {
+          "sact": NaN,
+          "wpm": 4.278611549938564,
+          "kspc": 1.5711786053745787,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P08": {
+          "sact": NaN,
+          "wpm": 4.071582435791218,
+          "kspc": 1.5803632955704403,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P09": {
+          "sact": NaN,
+          "wpm": 4.21043180665878,
+          "kspc": 1.6148612826099598,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P10": {
+          "sact": NaN,
+          "wpm": 4.329865361077111,
+          "kspc": 1.5537713793527748,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P11": {
+          "sact": NaN,
+          "wpm": 4.370685123532504,
+          "kspc": 1.5694627790851174,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P12": {
+          "sact": NaN,
+          "wpm": 4.303357823790151,
+          "kspc": 1.5573854920008765,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P13": {
+          "sact": NaN,
+          "wpm": 4.691885456614269,
+          "kspc": 1.5121687811145015,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P14": {
+          "sact": NaN,
+          "wpm": 4.379412925783894,
+          "kspc": 1.6361492515913354,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P15": {
+          "sact": NaN,
+          "wpm": 3.9293234886448447,
+          "kspc": 1.605115528547396,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P16": {
+          "sact": NaN,
+          "wpm": 4.712574522780725,
+          "kspc": 1.520829380889142,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P17": {
+          "sact": NaN,
+          "wpm": 4.141917848699764,
+          "kspc": 1.513237408719679,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P18": {
+          "sact": NaN,
+          "wpm": 4.007382314834809,
+          "kspc": 1.581108864172565,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        },
+        "P19": {
+          "sact": NaN,
+          "wpm": 4.612938431431582,
+          "kspc": 1.484769131373115,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.04,
+          "acceptance": 1.0
+        }
+      }
+    },
+    "Non-LLM-Intent": {
+      "aggregate": {
+        "acceptance": {
+          "mean": 0.009999999999999998,
+          "sd": 0.012565617248750865,
+          "n": 20
+        },
+        "bleu4": {
+          "mean": 0.1634369737766422,
+          "sd": 0.3385239771946956,
+          "n": 8
+        },
+        "far": {
+          "mean": 0.9900000000000002,
+          "sd": 0.012565617248750873,
+          "n": 20
+        },
+        "hallucination_hard": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "hallucination_soft": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "ihr@1": {
+          "mean": 0.09125,
+          "sd": 0.04885195142360985,
+          "n": 20
+        },
+        "ihr@3": {
+          "mean": 0.25125000000000003,
+          "sd": 0.07498903428607341,
+          "n": 20
+        },
+        "ihr@5": {
+          "mean": 0.35750000000000004,
+          "sd": 0.07699111363623318,
+          "n": 20
+        },
+        "rouge_l": {
+          "mean": 0.2834852970372187,
+          "sd": 0.29632613847117445,
+          "n": 8
+        },
+        "sact": {
+          "mean": 2.9875000000000003,
+          "sd": 0.019022147756316988,
+          "n": 20,
+          "median": 3.0,
+          "q1": 2.975,
+          "q3": 3.0
+        },
+        "wpm": {
+          "mean": 0.28692690954766,
+          "sd": 0.36441534480115445,
+          "n": 20
+        }
+      },
+      "per_persona": {
+        "P00": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "ihr@1": 0.15000000000000002,
+          "ihr@3": 0.3,
+          "ihr@5": 0.375,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 1.0,
+          "acceptance": 0.0,
+          "bleu4": NaN,
+          "rouge_l": NaN
+        },
+        "P01": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "ihr@1": 0.1,
+          "ihr@3": 0.3,
+          "ihr@5": 0.35,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 1.0,
+          "acceptance": 0.0,
+          "bleu4": NaN,
+          "rouge_l": NaN
+        },
+        "P02": {
+          "sact": 2.95,
+          "wpm": 0.6828528072837633,
+          "ihr@1": 0.07500000000000001,
+          "ihr@3": 0.275,
+          "ihr@5": 0.375,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.975,
+          "acceptance": 0.025,
+          "bleu4": 0.02926320930261462,
+          "rouge_l": 0.13926940639269406
+        },
+        "P03": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "ihr@1": 0.05,
+          "ihr@3": 0.175,
+          "ihr@5": 0.30000000000000004,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 1.0,
+          "acceptance": 0.0,
+          "bleu4": NaN,
+          "rouge_l": NaN
+        },
+        "P04": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "ihr@1": 0.075,
+          "ihr@3": 0.125,
+          "ihr@5": 0.325,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 1.0,
+          "acceptance": 0.0,
+          "bleu4": NaN,
+          "rouge_l": NaN
+        },
+        "P05": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "ihr@1": 0.07500000000000001,
+          "ihr@3": 0.225,
+          "ihr@5": 0.30000000000000004,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 1.0,
+          "acceptance": 0.0,
+          "bleu4": NaN,
+          "rouge_l": NaN
+        },
+        "P06": {
+          "sact": 2.975,
+          "wpm": 0.7841672890216579,
+          "ihr@1": 0.125,
+          "ihr@3": 0.425,
+          "ihr@5": 0.47500000000000003,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.975,
+          "acceptance": 0.025,
+          "bleu4": 0.039022875609047346,
+          "rouge_l": 0.15601023017902813
+        },
+        "P07": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "ihr@1": 0.05,
+          "ihr@3": 0.22499999999999998,
+          "ihr@5": 0.42500000000000004,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 1.0,
+          "acceptance": 0.0,
+          "bleu4": NaN,
+          "rouge_l": NaN
+        },
+        "P08": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "ihr@1": 0.125,
+          "ihr@3": 0.25,
+          "ihr@5": 0.35,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 1.0,
+          "acceptance": 0.0,
+          "bleu4": NaN,
+          "rouge_l": NaN
+        },
+        "P09": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "ihr@1": 0.025,
+          "ihr@3": 0.15,
+          "ihr@5": 0.25,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 1.0,
+          "acceptance": 0.0,
+          "bleu4": NaN,
+          "rouge_l": NaN
+        },
+        "P10": {
+          "sact": 2.95,
+          "wpm": 0.6828528072837633,
+          "ihr@1": 0.15,
+          "ihr@3": 0.175,
+          "ihr@5": 0.25,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.975,
+          "acceptance": 0.025,
+          "bleu4": 0.02926320930261462,
+          "rouge_l": 0.13926940639269406
+        },
+        "P11": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "ihr@1": 0.07500000000000001,
+          "ihr@3": 0.275,
+          "ihr@5": 0.4,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 1.0,
+          "acceptance": 0.0,
+          "bleu4": NaN,
+          "rouge_l": NaN
+        },
+        "P12": {
+          "sact": 3.0,
+          "wpm": 0.6617647058823529,
+          "ihr@1": 0.15000000000000002,
+          "ihr@3": 0.375,
+          "ihr@5": 0.475,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.975,
+          "acceptance": 0.025,
+          "bleu4": 0.040840098500623805,
+          "rouge_l": 0.16666666666666666
+        },
+        "P13": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "ihr@1": 0.1,
+          "ihr@3": 0.3,
+          "ihr@5": 0.375,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 1.0,
+          "acceptance": 0.0,
+          "bleu4": NaN,
+          "rouge_l": NaN
+        },
+        "P14": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "ihr@1": 0.125,
+          "ihr@3": 0.25,
+          "ihr@5": 0.4,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 1.0,
+          "acceptance": 0.0,
+          "bleu4": NaN,
+          "rouge_l": NaN
+        },
+        "P15": {
+          "sact": 3.0,
+          "wpm": 0.0,
+          "ihr@1": 0.0,
+          "ihr@3": 0.2,
+          "ihr@5": 0.325,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 1.0,
+          "acceptance": 0.0,
+          "bleu4": NaN,
+          "rouge_l": NaN
+        },
+        "P16": {
+          "sact": 2.975,
+          "wpm": 0.6721433905899925,
+          "ihr@1": 0.025,
+          "ihr@3": 0.25,
+          "ihr@5": 0.45,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.975,
+          "acceptance": 0.025,
+          "bleu4": 0.040840098500623805,
+          "rouge_l": 0.16666666666666666
+        },
+        "P17": {
+          "sact": 2.95,
+          "wpm": 0.9104704097116844,
+          "ihr@1": 0.175,
+          "ihr@3": 0.325,
+          "ihr@5": 0.4,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.975,
+          "acceptance": 0.025,
+          "bleu4": 1.0,
+          "rouge_l": 1.0
+        },
+        "P18": {
+          "sact": 2.975,
+          "wpm": 0.6721433905899925,
+          "ihr@1": 0.05,
+          "ihr@3": 0.175,
+          "ihr@5": 0.175,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.975,
+          "acceptance": 0.025,
+          "bleu4": 0.040840098500623805,
+          "rouge_l": 0.16666666666666666
+        },
+        "P19": {
+          "sact": 2.975,
+          "wpm": 0.6721433905899925,
+          "ihr@1": 0.125,
+          "ihr@3": 0.25,
+          "ihr@5": 0.375,
+          "hallucination_hard": 0.0,
+          "hallucination_soft": 0.0,
+          "far": 0.975,
+          "acceptance": 0.025,
+          "bleu4": 0.08742620049698942,
+          "rouge_l": 0.3333333333333333
+        }
+      }
+    }
+  },
+  "held_out": {
+    "MCGA-LM": {
+      "aggregate": {
+        "abstention": {
+          "mean": 0.9900000000000002,
+          "sd": 0.01701392618446803,
+          "n": 20
+        },
+        "acceptance": {
+          "mean": 0.01,
+          "sd": 0.017013926184468016,
+          "n": 20
+        },
+        "bleu4": {
+          "mean": 0.014686054515972796,
+          "sd": 0.0,
+          "n": 1
+        },
+        "ece": {
+          "mean": 0.010485184917633889,
+          "sd": 0.016602550436027704,
+          "n": 20
+        },
+        "far": {
+          "mean": 0.9900000000000002,
+          "sd": 0.01701392618446803,
+          "n": 20
+        },
+        "hallucination_hard": {
+          "mean": 0.015000000000000003,
+          "sd": 0.020519567041703084,
+          "n": 20
+        },
+        "hallucination_soft": {
+          "mean": 0.04,
+          "sd": 0.056428809364683474,
+          "n": 20
+        },
+        "ihr@1": {
+          "mean": 0.00125,
+          "sd": 0.005590169943749475,
+          "n": 20
+        },
+        "ihr@3": {
+          "mean": 0.00125,
+          "sd": 0.005590169943749475,
+          "n": 20
+        },
+        "ihr@5": {
+          "mean": 0.005,
+          "sd": 0.013078709094514923,
+          "n": 20
+        },
+        "itr_intent": {
+          "mean": 8.272179668475099,
+          "sd": 0.37757118984670035,
+          "n": 20
+        },
+        "kspc": {
+          "mean": 1.2441176470588236,
+          "sd": 0.0,
+          "n": 1
+        },
+        "mean_clarifications": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "rouge_l": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 1
+        },
+        "sact": {
+          "mean": 2.3487500000000003,
+          "sd": 0.03190755561404153,
+          "n": 20,
+          "median": 2.35,
+          "q1": 2.325,
+          "q3": 2.375
+        },
+        "wpm": {
+          "mean": 0.42287083013920157,
+          "sd": 0.7259788114763173,
+          "n": 20
+        }
+      }
+    },
+    "RAG-LLM": {
+      "aggregate": {
+        "abstention": {
+          "mean": 0.9887499999999999,
+          "sd": 0.018978866362906223,
+          "n": 20
+        },
+        "acceptance": {
+          "mean": 0.01125,
+          "sd": 0.01897886636290621,
+          "n": 20
+        },
+        "bleu4": {
+          "mean": 0.013551918759350778,
+          "sd": 0.0,
+          "n": 1
+        },
+        "ece": {
+          "mean": 0.011670782945911925,
+          "sd": 0.018622352910623804,
+          "n": 20
+        },
+        "far": {
+          "mean": 0.9887499999999999,
+          "sd": 0.018978866362906223,
+          "n": 20
+        },
+        "hallucination_hard": {
+          "mean": 0.0125,
+          "sd": 0.017206180040292136,
+          "n": 20
+        },
+        "hallucination_soft": {
+          "mean": 0.05,
+          "sd": 0.053187849819494044,
+          "n": 20
+        },
+        "ihr@1": {
+          "mean": 0.0025,
+          "sd": 0.007694837640638656,
+          "n": 20
+        },
+        "ihr@3": {
+          "mean": 0.005,
+          "sd": 0.010259783520851542,
+          "n": 20
+        },
+        "ihr@5": {
+          "mean": 0.005,
+          "sd": 0.010259783520851542,
+          "n": 20
+        },
+        "itr_intent": {
+          "mean": 8.01889721442229,
+          "sd": 0.6929661728564958,
+          "n": 20
+        },
+        "kspc": {
+          "mean": 1.2946428571428572,
+          "sd": 0.0,
+          "n": 1
+        },
+        "mean_clarifications": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "rouge_l": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 1
+        },
+        "sact": {
+          "mean": 2.98625,
+          "sd": 0.02747606613993922,
+          "n": 20,
+          "median": 3.0,
+          "q1": 2.99375,
+          "q3": 3.0
+        },
+        "wpm": {
+          "mean": 0.46324957458983745,
+          "sd": 0.794201811438101,
+          "n": 20
+        }
+      }
+    },
+    "M-LLM": {
+      "aggregate": {
+        "abstention": {
+          "mean": 0.99875,
+          "sd": 0.0055901699437494795,
+          "n": 20
+        },
+        "acceptance": {
+          "mean": 0.00125,
+          "sd": 0.005590169943749475,
+          "n": 20
+        },
+        "bleu4": {
+          "mean": NaN,
+          "sd": NaN,
+          "n": 0
+        },
+        "ece": {
+          "mean": 0.0014120720899791198,
+          "sd": 0.00555213628158104,
+          "n": 20
+        },
+        "far": {
+          "mean": 0.99875,
+          "sd": 0.0055901699437494795,
+          "n": 20
+        },
+        "hallucination_hard": {
+          "mean": 0.145,
+          "sd": 0.054772255750516606,
+          "n": 20
+        },
+        "hallucination_soft": {
+          "mean": 0.715,
+          "sd": 0.08713268768469097,
+          "n": 20
+        },
+        "ihr@1": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "ihr@3": {
+          "mean": 0.00125,
+          "sd": 0.005590169943749475,
+          "n": 20
+        },
+        "ihr@5": {
+          "mean": 0.00125,
+          "sd": 0.005590169943749475,
+          "n": 20
+        },
+        "itr_intent": {
+          "mean": 8.272179668475099,
+          "sd": 0.37757118984670035,
+          "n": 20
+        },
+        "kspc": {
+          "mean": NaN,
+          "sd": NaN,
+          "n": 0
+        },
+        "mean_clarifications": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "rouge_l": {
+          "mean": NaN,
+          "sd": NaN,
+          "n": 0
+        },
+        "sact": {
+          "mean": 2.35625,
+          "sd": 0.02674809388191591,
+          "n": 20,
+          "median": 2.35,
+          "q1": 2.34375,
+          "q3": 2.375
+        },
+        "wpm": {
+          "mean": 0.07177033492822964,
+          "sd": 0.32096669533489786,
+          "n": 20
+        }
+      }
+    },
+    "LLM-Only": {
+      "aggregate": {
+        "abstention": {
+          "mean": 0.99875,
+          "sd": 0.0055901699437494795,
+          "n": 20
+        },
+        "acceptance": {
+          "mean": 0.00125,
+          "sd": 0.005590169943749475,
+          "n": 20
+        },
+        "bleu4": {
+          "mean": NaN,
+          "sd": NaN,
+          "n": 0
+        },
+        "ece": {
+          "mean": 0.0014314637402367226,
+          "sd": 0.00554889247713632,
+          "n": 20
+        },
+        "far": {
+          "mean": 0.99875,
+          "sd": 0.0055901699437494795,
+          "n": 20
+        },
+        "hallucination_hard": {
+          "mean": 0.145,
+          "sd": 0.054772255750516606,
+          "n": 20
+        },
+        "hallucination_soft": {
+          "mean": 0.7162499999999999,
+          "sd": 0.08858351694126967,
+          "n": 20
+        },
+        "ihr@1": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "ihr@3": {
+          "mean": 0.00125,
+          "sd": 0.005590169943749475,
+          "n": 20
+        },
+        "ihr@5": {
+          "mean": 0.00125,
+          "sd": 0.005590169943749475,
+          "n": 20
+        },
+        "itr_intent": {
+          "mean": 8.272179668475099,
+          "sd": 0.37757118984670035,
+          "n": 20
+        },
+        "kspc": {
+          "mean": NaN,
+          "sd": NaN,
+          "n": 0
+        },
+        "mean_clarifications": {
+          "mean": 0.0,
+          "sd": 0.0,
+          "n": 20
+        },
+        "rouge_l": {
+          "mean": NaN,
+          "sd": NaN,
+          "n": 0
+        },
+        "sact": {
+          "mean": 2.3487500000000003,
+          "sd": 0.02864827541424656,
+          "n": 20,
+          "median": 2.35,
+          "q1": 2.325,
+          "q3": 2.375
+        },
+        "wpm": {
+          "mean": 0.07177033492822964,
+          "sd": 0.32096669533489786,
+          "n": 20
+        }
+      }
+    }
+  },
+  "statistics": {
+    "sact_anova": {
+      "F": 11583.945535151468,
+      "df1": 1.009334889970923,
+      "df2": 19.177362909447538,
+      "p": 3.5600588792524134e-28,
+      "partial_eta_sq": 0.9983624847722986,
+      "mauchly_W": 7.112571363593554e-10,
+      "mauchly_p": 2.986521475591276e-68,
+      "gg_epsilon": 0.2018669779941846,
+      "gg_corrected": 1.0
+    },
+    "sact_systems": [
+      "MCGA-LM",
+      "RAG-LLM",
+      "M-LLM",
+      "LLM-Only",
+      "TouchChat",
+      "Non-LLM-Intent"
+    ],
+    "sact_pairwise_vs_MCGA-LM": [
+      {
+        "comparison": "MCGA-LM vs RAG-LLM",
+        "statistic": -122.90800479832318,
+        "p": 4.9894018265503135e-29,
+        "d_s": -38.1809830093053,
+        "p_holm": 2.4947009132751566e-28,
+        "significant": true,
+        "stars": "***"
+      },
+      {
+        "comparison": "MCGA-LM vs M-LLM",
+        "statistic": 0.4380858271151854,
+        "p": 0.666264137698655,
+        "d_s": 0.050032927234396625,
+        "p_holm": 0.666264137698655,
+        "significant": false,
+        "stars": "n.s."
+      },
+      {
+        "comparison": "MCGA-LM vs LLM-Only",
+        "statistic": 1.7886622696240384,
+        "p": 0.08962642600042593,
+        "d_s": 0.33633721433956376,
+        "p_holm": 0.17925285200085186,
+        "significant": false,
+        "stars": "n.s."
+      },
+      {
+        "comparison": "MCGA-LM vs TouchChat",
+        "statistic": -109.68813869966608,
+        "p": 4.322915447735665e-28,
+        "d_s": -34.99361414059087,
+        "p_holm": 1.2968746343206996e-27,
+        "significant": true,
+        "stars": "***"
+      },
+      {
+        "comparison": "MCGA-LM vs Non-LLM-Intent",
+        "statistic": -118.44810462127371,
+        "p": 1.0061409101126187e-28,
+        "d_s": -29.785705217337448,
+        "p_holm": 4.0245636404504748e-28,
+        "significant": true,
+        "stars": "***"
+      }
+    ],
+    "nonparametric": {
+      "hallucination_hard": [
+        {
+          "comparison": "MCGA-LM vs RAG-LLM",
+          "statistic": 67.5,
+          "p": 0.9791243636425369,
+          "d_s": 0.09400643223910556,
+          "p_holm": 0.9791243636425369,
+          "stars": "n.s."
+        },
+        {
+          "comparison": "MCGA-LM vs M-LLM",
+          "statistic": 10.5,
+          "p": 0.0006534307287400117,
+          "d_s": -1.5681981006935528,
+          "p_holm": 0.001960292186220035,
+          "stars": "**"
+        },
+        {
+          "comparison": "MCGA-LM vs LLM-Only",
+          "statistic": 10.5,
+          "p": 0.0006534307287400117,
+          "d_s": -1.5681981006935528,
+          "p_holm": 0.001960292186220035,
+          "stars": "**"
+        },
+        {
+          "comparison": "MCGA-LM vs TouchChat",
+          "statistic": 0.0,
+          "p": 0.00023708214760007556,
+          "d_s": 2.224150814771077,
+          "p_holm": 0.0011854107380003778,
+          "stars": "**"
+        },
+        {
+          "comparison": "MCGA-LM vs Non-LLM-Intent",
+          "statistic": 0.0,
+          "p": 0.00023708214760007556,
+          "d_s": 2.224150814771077,
+          "p_holm": 0.0011854107380003778,
+          "stars": "**"
+        }
+      ],
+      "hallucination_hard_art_rank_means": [
+        60.325,
+        58.275,
+        98.15,
+        98.15,
+        24.05,
+        24.05
+      ],
+      "ihr@3": [
+        {
+          "comparison": "MCGA-LM vs RAG-LLM",
+          "statistic": 0.0,
+          "p": 1.0,
+          "d_s": 0.0,
+          "p_holm": 1.0,
+          "stars": "n.s."
+        },
+        {
+          "comparison": "MCGA-LM vs M-LLM",
+          "statistic": 1.5,
+          "p": 1.0,
+          "d_s": 0.0,
+          "p_holm": 1.0,
+          "stars": "n.s."
+        },
+        {
+          "comparison": "MCGA-LM vs LLM-Only",
+          "statistic": 1.5,
+          "p": 1.0,
+          "d_s": 0.0,
+          "p_holm": 1.0,
+          "stars": "n.s."
+        },
+        {
+          "comparison": "MCGA-LM vs Non-LLM-Intent",
+          "statistic": 0.0,
+          "p": 8.621447994652249e-05,
+          "d_s": -4.701688580607703,
+          "p_holm": 0.00034485791978608997,
+          "stars": "***"
+        }
+      ],
+      "ihr@3_art_rank_means": [
+        39.85,
+        39.85,
+        41.15,
+        41.15,
+        90.5
+      ]
+    },
+    "post_hoc_power_f0.40": 0.9286774282876368
+  }
+}
