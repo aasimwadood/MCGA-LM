@@ -106,6 +106,7 @@ training:
   optimiser: adamw
   scheduler: cosine
   lora_epochs: 3
+  representation_epochs: 100
   grad_clip: 1.0
   device: auto
   num_workers: 0
