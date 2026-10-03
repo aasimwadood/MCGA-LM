@@ -1,4 +1,20 @@
+"""Stage 3: representation training, scoring head, and per-user calibration.
 
+Paper Sec. 3.7 step 3: the intent graph is initialised from a structured intake
+interview and the model is personalised on accepted utterances, continuing
+on-device throughout the product lifetime.
+
+This stage fits the Perceiver/TFT/GAT against Eq. (9), trains the intent-scoring
+head, and calibrates tau per persona against the 5% false-acceptance budget of
+Sec. 3.6.
+
+Session seeds are disjoint by role so calibration never sees training turns:
+``TRAIN_SEEDS`` for representation learning, ``CALIBRATION_SEED`` for tau.
+
+Sec. 3.7 describes one model per user. ``per_persona=True`` does that; the
+default fits a single shared model across all personas, which is cheaper and is
+the configuration in which retrieval has been observed to under-fit.
+"""
 
 from __future__ import annotations
 
@@ -355,9 +371,24 @@ def train(
 
     if pretrained:
         state = torch.load(pretrained, map_location=device, weights_only=False)
-        model.context_encoder.load_state_dict(state["context_encoder"])
-        model.tft.load_state_dict(state["tft"])
-        model.decoder.load_state_dict(state["decoder"])
+        try:
+            model.context_encoder.load_state_dict(state["context_encoder"])
+            model.tft.load_state_dict(state["tft"])
+            model.decoder.load_state_dict(state["decoder"])
+        except RuntimeError as exc:
+            # Almost always a checkpoint pre-trained under a different config --
+            # typically one produced by --quick (32x128 encoder) being loaded into
+            # the default 256x512 one. Say that, rather than printing tensor
+            # shapes and leaving the reader to infer it.
+            raise RuntimeError(
+                f"the checkpoint at {pretrained} does not match this configuration "
+                f"(perceiver {cfg.perceiver.num_latents}x{cfg.perceiver.latent_dim}, "
+                f"depth {cfg.perceiver.depth}; tft window {cfg.tft.window}). Pre-train "
+                f"with the same config you intend to evaluate with:\n"
+                f"    python scripts/pretrain_encoder.py --out runs/"
+                + (f" --config <your config>" if cfg.name != "mcga-lm" else "")
+                + f"\nUnderlying error: {exc}"
+            ) from exc
         logger.info("loaded pre-trained encoder from %s (source=%s)", pretrained, state.get("pretraining_source"))
     else:
         logger.warning(
@@ -367,7 +398,8 @@ def train(
 
     encoder = TurnEncoder(cfg.inputs, reduced_sensor_set=cfg.simulation.reduced_sensor_set)
     sessions = build_sessions(personas, cfg, TRAIN_SEEDS, encoder)
-    n_epochs = epochs if epochs is not None else cfg.training.lora_epochs
+    # Stage 3 fits the GAT. It must not borrow the LoRA epoch count.
+    n_epochs = epochs if epochs is not None else cfg.training.representation_epochs
 
     history = train_representations(
         model, personas, sessions, cfg, device, n_epochs, include_fatigue_loss
@@ -421,7 +453,7 @@ def _train_per_persona(
     path exists for exactly that reason.
     """
     models: Dict[str, MCGALM] = {}
-    combined = TrainingReport(epochs=epochs or cfg.training.lora_epochs, per_persona=True)
+    combined = TrainingReport(epochs=epochs or cfg.training.representation_epochs, per_persona=True)
     for i, persona in enumerate(personas):
         pid = persona.spec.persona_id
         logger.info("per-persona training %d/%d (%s)", i + 1, len(personas), pid)

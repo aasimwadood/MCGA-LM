@@ -1,7 +1,21 @@
+"""The paper's language model: LLaMA-3-8B-Instruct, 4-bit NF4, LoRA (Table 3).
+
+Sec. 3.5 / Table 3: r = 16, alpha = 32 on the attention matrices and feed-forward
+gates, quantised to 4-bit NF4 for on-device inference.
+
+Requires a CUDA GPU -- bitsandbytes NF4 has no Apple Silicon or CPU backend -- and
+gated weights from Hugging Face. See "Running with LLaMA-3-8B" in README.md.
+
+``classify_function`` has no counterpart in the paper. The prompt of Sec. 3.5
+asks for a bare utterance, not a labelled intent, but both the simulated user's
+acceptance rule and IHR@K compare against the pragmatic function, so it has to be
+recovered from the generated text. It is a measurement instrument, not part of
+the architecture.
+"""
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 import numpy as np
 
@@ -30,12 +44,26 @@ class HFLanguageBackend:
 
         quant_config = None
         if cfg.quantisation == "nf4":  # Table 3
+            # bitsandbytes NF4 is CUDA-only. On Apple Silicon or CPU the import
+            # succeeds and the failure surfaces much later as an opaque kernel
+            # error, so check here and say what is actually wrong.
+            if not torch.cuda.is_available():
+                raise RuntimeError(
+                    "quantisation='nf4' (Table 3) needs a CUDA GPU: bitsandbytes has no "
+                    "Apple Silicon or CPU backend. Either run on CUDA, or set "
+                    "llm.quantisation='none' to load in bf16 -- which needs ~16 GB and is "
+                    "no longer the paper's deployed configuration, so say so in any result."
+                )
             from transformers import BitsAndBytesConfig
 
             quant_config = BitsAndBytesConfig(
                 load_in_4bit=True,
                 bnb_4bit_quant_type="nf4",
                 bnb_4bit_compute_dtype=torch.float16,
+            )
+        elif cfg.quantisation not in ("none", "", None):
+            raise ValueError(
+                f"unknown quantisation {cfg.quantisation!r}; expected 'nf4' (Table 3) or 'none'"
             )
         self.model = AutoModelForCausalLM.from_pretrained(
             cfg.model_name, quantization_config=quant_config, device_map="auto"
@@ -59,6 +87,12 @@ class HFLanguageBackend:
         if rng is not None:
             torch.manual_seed(int(rng.integers(0, 2**31 - 1)))
         text = prompt.render()
+        # NOTE: prompt.render() emits the [INST] ... [/INST] wrapper that Sec. 3.5
+        # specifies verbatim. That is Llama-2/Mistral syntax; Llama-3-Instruct
+        # expects its own header-token chat template and will treat [INST] as
+        # ordinary text. Following the paper here rather than the model, since
+        # the prompt format is a stated part of the method -- but expect this to
+        # cost output quality, and see prompt.py if you want the native template.
         inputs = self.tokenizer(text, return_tensors="pt").to(self.model.device)
         with torch.no_grad():
             out = self.model.generate(
@@ -69,25 +103,52 @@ class HFLanguageBackend:
                 num_return_sequences=n,
                 max_new_tokens=self.cfg.max_new_tokens,
                 pad_token_id=self.tokenizer.pad_token_id,
+                return_dict_in_generate=True,
+                output_scores=True,
             )
-        generated = out[:, inputs["input_ids"].shape[1] :]
+        generated = out.sequences[:, inputs["input_ids"].shape[1] :]
         decoded = self.tokenizer.batch_decode(generated, skip_special_tokens=True)
-        known = {name.lower() for name, _, _ in prompt.active_nodes}
+        # Rank by mean token log-probability rather than by the order the
+        # sampler happened to emit. num_return_sequences draws independently, so
+        # generation order carries no information and IHR@1 vs IHR@5 would be
+        # meaningless without a real score.
+        scores = self._sequence_logprobs(out, generated)
+
+        node_types = {name.lower(): ntype for name, ntype, _ in prompt.active_nodes}
         results: List[GeneratedUtterance] = []
         for i, raw in enumerate(decoded):
             utterance = raw.strip().split("\n")[0].strip()
-            entities = tuple(t for t in utterance.lower().split() if t in known)
+            # Entities are the graph-linked nodes the utterance names -- NOT every
+            # token in it. Passing all tokens makes the simulated user accept on
+            # any incidental word match and makes every unlisted word look like a
+            # hallucinated entity.
+            entities = tuple(t for t in _words(utterance) if t in node_types)
             results.append(
                 GeneratedUtterance(
                     text=utterance,
-                    function="",  # not recoverable without a classifier
+                    function=classify_function(utterance, [node_types[e] for e in entities]),
                     source_nodes=entities,
-                    entities=tuple(utterance.lower().split()),
-                    score=-float(i),
+                    entities=entities,
+                    score=float(scores[i]) if i < len(scores) else 0.0,
                     grounded=bool(entities),
                 )
             )
         return results
+
+    @staticmethod
+    def _sequence_logprobs(out, generated) -> List[float]:
+        """Mean log-probability of each sampled continuation."""
+        import torch
+
+        transition = getattr(out, "scores", None)
+        if not transition:
+            return [0.0] * generated.shape[0]
+        # (steps, batch, vocab) -> per-step log-probs of the tokens actually taken
+        stacked = torch.stack(transition, dim=0).log_softmax(dim=-1)
+        steps = min(stacked.shape[0], generated.shape[1])
+        taken = generated[:, :steps].T.unsqueeze(-1)
+        chosen = stacked[:steps].gather(-1, taken).squeeze(-1)  # (steps, batch)
+        return chosen.mean(dim=0).float().cpu().tolist()
 
     def embed_tokens(self, text: str, max_len: int = 24) -> np.ndarray:
         import torch
@@ -97,6 +158,63 @@ class HFLanguageBackend:
         with torch.no_grad():
             embeddings = self.model.get_input_embeddings()(ids["input_ids"])
         return embeddings[0].float().cpu().numpy()
+
+
+_STOPWORDS = frozenset(
+    "a an the i me my you your it is am are was were be been do does did to of for "
+    "and or but if then some any please could would can will shall may might just "
+    "now with on in at from that this these those".split()
+)
+
+
+def _words(text: str) -> List[str]:
+    return [w.strip(".,!?;:\"'").lower() for w in text.split() if w.strip(".,!?;:\"'")]
+
+
+def classify_function(utterance: str, node_types: Sequence[str] = ()) -> str:
+    """Recover the pragmatic function (Sec. 4.1 taxonomy) from generated text.
+
+    The paper's prompt (Sec. 3.5) asks the LLM for a bare utterance, not a
+    labelled intent, so the function has to be recovered afterwards. Both the
+    simulated user's acceptance rule and IHR@K compare against it, so leaving it
+    empty -- as this backend previously did -- forces IHR to exactly 0% and
+    disables the exact-match acceptance path, regardless of how good the model
+    is. That is a measurement artefact, not a property of the language model.
+
+    Scored by content-word overlap against each function's surface forms in
+    ``TEMPLATES``, restricted where possible to functions whose slot type matches
+    a node the utterance actually named. Returns ``""`` when nothing overlaps,
+    so an unrecognisable utterance is not silently assigned a function.
+
+    ASSUMPTION: this classifier has no counterpart in the paper. It is a
+    measurement instrument, not part of the architecture, and it is deliberately
+    conservative -- a wrong label costs an acceptance, an empty one costs a hit.
+    """
+    from ..data.taxonomy import PRAGMATIC_FUNCTIONS, SLOT_TYPE
+    from .template_backend import TEMPLATES
+
+    tokens = set(_words(utterance)) - _STOPWORDS
+    if not tokens:
+        return ""
+
+    allowed = set(PRAGMATIC_FUNCTIONS)
+    if node_types:
+        typed = {fn for fn in PRAGMATIC_FUNCTIONS if SLOT_TYPE[fn] in set(node_types)}
+        if typed:
+            allowed = typed
+
+    best, best_score = "", 0.0
+    for fn in PRAGMATIC_FUNCTIONS:
+        if fn not in allowed:
+            continue
+        for form in TEMPLATES[fn]:
+            cue = set(_words(form.replace("{slot}", ""))) - _STOPWORDS
+            if not cue:
+                continue
+            overlap = len(cue & tokens) / len(cue)
+            if overlap > best_score:
+                best, best_score = fn, overlap
+    return best if best_score > 0.0 else ""
 
 
 def attach_lora_adapters(model, cfg: LLMConfig):

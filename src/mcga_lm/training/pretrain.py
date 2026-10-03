@@ -1,4 +1,14 @@
+"""Stages 1-2: multimodal encoder and TFT pre-training (paper Sec. 3.7, 4.8).
 
+Sec. 3.7 lists these as separate stages, but stage 2 repeats stage 1 on the same
+data with no stated difference, so they run as one pass here (see ERRATA.md).
+
+Sec. 4.8: 100 epochs, batch size 128, AdamW at 1e-4 with cosine decay.
+
+When MAMEM/CLAS/WESAD are absent this falls back to
+``synthetic_pretraining_corpus`` and says so in the report's ``source`` field --
+a fatigue head fitted that way carries no physiological grounding.
+"""
 
 from __future__ import annotations
 

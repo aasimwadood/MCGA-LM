@@ -6,8 +6,8 @@ Reconstruction in Assistive Communication".
 
 Every experiment here runs on synthetic personas, as the paper's evaluation
 does. The default language backend is weight-free so the pipeline runs without
-model weights; see docs/STATUS.md for which results have been executed under
-which configuration, and docs/PAPER_MAPPING.md for the paper-to-code map.
+model weights. See the Reproduction status section of README.md for what the
+default configuration does and does not reproduce.
 """
 
 from .config import Config

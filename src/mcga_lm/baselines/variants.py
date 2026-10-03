@@ -1,4 +1,20 @@
+"""Configuration variants for the generative baselines and ablations.
 
+Baselines (paper Sec. 4.3)
+  LLM-Only   dialogue history + brief profile only -- "disembodied generative AI"
+  M-LLM      Perceiver IO / TFT retained, graph memory replaced by a generic
+             prompt -- isolates the intent graph's contribution
+  RAG-LLM    queries the graph but decodes at fixed temperature -- isolates
+             adaptive modulation
+
+Ablations (paper Sec. 4.4): the paper writes these with a set-minus sign --
+remove Perceiver IO, TFT, GAT, the Bayesian gate, or cross-attention.
+
+Sec. 4.4 calls the ablation "full-factorial" and then describes removing one
+component at a time. Fig. 4 shows the one-at-a-time design, which is the default;
+``full_factorial_design()`` builds the 2^k design the first sentence claims. See
+ERRATA.md.
+"""
 
 from __future__ import annotations
 
@@ -117,7 +133,7 @@ def get_variant(name: str) -> Variant:
 # design the sentence claims is built below, because the two answer different
 # questions -- one-at-a-time cannot detect an interaction, and the paper's own
 # discussion ("the graph and adaptation modules remain the dominant
-# contributors") is an interaction claim. See D-10 in docs/ASSUMPTIONS.md.
+# contributors") is an interaction claim.
 
 FACTORS: Dict[str, Callable[[Config], Config]] = {
     "PerceiverIO": full_system,  # handled by the runner's ablate_perceiver flag

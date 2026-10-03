@@ -1,4 +1,22 @@
+"""Statistical analysis plan (paper Sec. 4.7).
 
+  * repeated-measures ANOVA with persona as random effect, Mauchly's test for
+    sphericity and Greenhouse-Geisser correction where needed
+  * Cohen's d_s and the paired d_z, with 95% bootstrap percentile intervals
+  * aligned rank transform (ART) + pairwise Wilcoxon for non-normal metrics
+  * Holm-Bonferroni correction within each metric family
+  * bootstrap resampling, 10,000 iterations
+
+DEVIATION. The manuscript attributed its ANOVA and p-values to R 4.3.1 with afex
+1.3-0 and emmeans 1.8.9, but no script or per-persona data for that analysis has
+been found, and the revision withdraws them (ERRATA.md, E-1). This is a NumPy/SciPy
+implementation of the original plan, so the repository has no R dependency. The
+formulas are standard and unit-tested, but they have never been run on the
+paper's data and reproduce none of its inferential statistics.
+
+The only statistic the revised paper keeps is d_s computed from Table 7's means
+and SDs, which :func:`cohens_ds_from_summary` reproduces.
+"""
 
 from __future__ import annotations
 
@@ -24,9 +42,10 @@ def cohens_ds(x1: Sequence[float], x2: Sequence[float]) -> float:
 def cohens_ds_from_summary(m1: float, s1: float, m2: float, s2: float) -> float:
     """d_s straight from published means/SDs.
 
-    This is the form that can be recomputed from a table of means and SDs alone.
-    Note that the effect sizes printed in the paper's Sec. 5.1 are NOT
-    reproducible this way -- see :func:`cohens_dz` and DEVIATION D-09.
+    This is the form that can be recomputed from a table of means and SDs alone,
+    and the one the revised Sec. 5.1 reports. The effect sizes the manuscript
+    originally printed there are NOT reproducible this way -- see
+    :func:`cohens_dz` and ERRATA E-1.
     """
     denom = np.sqrt((s1**2 + s2**2) / 2.0)
     return float((m1 - m2) / denom) if denom > 0 else float("nan")
@@ -35,12 +54,12 @@ def cohens_ds_from_summary(m1: float, s1: float, m2: float, s2: float) -> float:
 def cohens_dz(x1: Sequence[float], x2: Sequence[float]) -> float:
     """Cohen's ``d_z`` for a paired contrast: mean difference over its own SD.
 
-    Sec. 4.7 says "effect sizes are Cohen's ``d`` for paired contrasts" and
-    Sec. 5.1 prints "Cohen's ``d`` (paired, over personas)". ``d_z`` is the
-    paired form, and unlike :func:`cohens_ds` it needs the per-persona
-    differences: it cannot be recovered from a table of means and SDs, because
-    the SD of the differences depends on how the two conditions covary across
-    personas. DEVIATION D-09 records why this matters here.
+    The original Sec. 4.7 said "effect sizes are Cohen's ``d`` for paired
+    contrasts" and Sec. 5.1 printed "Cohen's ``d`` (paired, over personas)".
+    ``d_z`` is the paired form, and unlike :func:`cohens_ds` it needs the
+    per-persona differences: it cannot be recovered from a table of means and
+    SDs, because the SD of the differences depends on how the two conditions
+    covary across personas. ERRATA E-1 records why this matters here.
     """
     a = np.asarray(x1, dtype=float)
     b = np.asarray(x2, dtype=float)
@@ -56,8 +75,9 @@ def implied_sd_of_differences(mean_1: float, mean_2: float, d_z: float) -> float
 
     Given a printed ``d_z`` and the two condition means, ``sd_diff = dmean / d_z``.
     This is the only way to interrogate a paired effect size reported without the
-    per-subject data, and it is what shows that the Sec. 5.1 figures cannot be
-    ``d_s`` (D-09): reproducing them as ``d_z`` requires the MCGA-LM vs M-LLM
+    per-subject data, and it is what shows that the effect sizes originally
+    printed in Sec. 5.1 cannot be ``d_s`` (ERRATA E-1): reproducing them as
+    ``d_z`` requires the MCGA-LM vs M-LLM
     differences to vary about five times less across personas than the
     MCGA-LM vs grid differences.
     """
@@ -205,7 +225,8 @@ def pairwise_wilcoxon(
 
 
 def paired_t_tests(data: np.ndarray, labels: Sequence[str], reference: int = 0) -> List[Dict[str, float]]:
-    """Post-hoc paired t-tests (Table 8's significance markers)."""
+    """Post-hoc paired t-tests (the original Table 8's significance markers,
+    withdrawn in the revision -- ERRATA E-1)."""
     from scipy import stats
 
     x = np.asarray(data, dtype=float)
@@ -298,7 +319,7 @@ def post_hoc_power(effect_f: float, n: int, k: int, alpha: float = 0.05, rho: fl
     measures option inflates lambda by ``1/(1 - rho)``, which raises power
     further; with rho > 0 this function reproduces the paper's claim, and
     without it the figure is slightly below 0.90. Reported as-is rather than
-    tuned -- see D-03 in docs/ASSUMPTIONS.md.
+    tuned.
     """
     from scipy import stats
 
@@ -317,9 +338,11 @@ def bootstrap_effect_size(
 ) -> Dict[str, float]:
     """Cohen's ``d_s`` with a 95% bootstrap percentile CI (Sec. 5.1).
 
-    Sec. 5.1 reports every effect size as a point estimate with an interval --
-    "vs. Grid-based AAC is 2.34 [1.62, 3.06]" -- and states that "all intervals
-    are 95% bootstrap percentile intervals (10,000 resamples)". The contrasts
+    The original Sec. 5.1 reported every effect size as a point estimate with an
+    interval -- "vs. Grid-based AAC is 2.34 [1.62, 3.06]" -- and stated that "all
+    intervals are 95% bootstrap percentile intervals (10,000 resamples)". The
+    revision drops those intervals because they need per-persona data the paper
+    does not have (ERRATA E-1); runs of this repository do have it. The contrasts
     are paired over personas, so the resampling unit is the persona: each draw
     takes the same resampled personas from both conditions, which preserves the
     within-persona pairing the repeated-measures design depends on. Pass
@@ -353,7 +376,7 @@ def bootstrap_effect_size(
 
 
 def format_effect_size(result: Mapping[str, float], nd: int = 2) -> str:
-    """Render an effect size the way Sec. 5.1 prints it: ``d [low, high]``."""
+    """Render an effect size the way the original Sec. 5.1 printed it: ``d [low, high]``."""
     return (
         f"{result['d_s']:.{nd}f} [{result['ci_low']:.{nd}f}, {result['ci_high']:.{nd}f}]"
         if np.isfinite(result.get("ci_low", np.nan))

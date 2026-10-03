@@ -1,4 +1,18 @@
+"""Evaluation metrics (paper Sec. 4.2).
 
+Communication efficiency
+  SACT     switch activations per communicative turn (primary endpoint)
+  ITR      Wolpaw information transfer rate, bits/min
+  WPM      words per minute, including selection, reading and correction time
+  IHR@K    intent hit rate at rank K (K = 1, 3, 5)
+  KSPC     keystrokes per character
+
+Linguistic and safety quality
+  H        hallucination rate -- hard hallucinations only (see eval.hallucination)
+  FAR      per-utterance false acceptance rate
+  BLEU-4 / ROUGE-L
+  ECE      confidence-correctness calibration error over 10 equal-width bins
+"""
 
 from __future__ import annotations
 
@@ -48,7 +62,7 @@ def information_transfer_rate(n_choices: int, accuracy: float, select_seconds: f
     gives K = 3, P = 0.89, T_select = 4.2 s and reports 18.3 bits/min; this
     formula returns 13.93 for those inputs. T_select ~ 3.2 s would give 18.3.
     We keep the stated 4.2 s, so this function cannot reproduce the printed
-    figure -- see docs/ASSUMPTIONS.md.
+    figure.
     """
     if n_choices < 2 or select_seconds <= 0:
         return float("nan")
