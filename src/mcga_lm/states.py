@@ -1,4 +1,9 @@
+"""Discretisation of the cognitive state vector (paper Sec. 3.5, component 2).
 
+Sec. 3.5 discretises s_cog,t into low_fatigue / moderate_fatigue / high_fatigue
+and maps each to explicit generation instructions. The paper does not give the
+cut points; equal thirds of the normalised index are used here (ASSUMPTION).
+"""
 
 from __future__ import annotations
 

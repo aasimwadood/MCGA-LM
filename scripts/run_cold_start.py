@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
+"""Cold-start personalisation learning curve (paper Sec. 6.2, Fig. 6).
 
+    python scripts/run_cold_start.py --out runs/
+
+Sec. 6.2: "full personalisation requires roughly 50-80 accepted utterances (2-4
+sessions), with performance comparable to the RAG-LLM baseline beforehand".
+Starts each persona from the sparse intake graph of Sec. 3.7 and measures SACT
+against the number of accepted utterances. Each simulated session is one day, so
+the 24-hour LoRA queue of Sec. 3.6 releases a session's accepted utterances into
+the persona's adapter before the next one (LLaMA backend only).
+"""
 
 from __future__ import annotations
 
@@ -17,7 +27,7 @@ def main() -> None:
     parser.add_argument("--checkpoints", type=int, nargs="*", default=[0, 20, 40, 60, 80, 120, 160, 200])
     parser.add_argument("--quick", action="store_true")
     parser.add_argument("--per-persona", action="store_true",
-                        help="fit one model per persona (Sec. 3.7)")
+                        help="fit a separate encoder/GAT per persona (not in the paper)")
     args = parser.parse_args()
     cfg = load_config(args)
     if args.quick:
@@ -36,6 +46,7 @@ def main() -> None:
     from mcga_lm.memory.graph import IntentMemoryGraph
     from mcga_lm.models.gat import graph_tensors
     from mcga_lm.safety.gate import BayesianGate
+    from mcga_lm.training.lora import LoRAUpdateQueue, flush_queue, supports_lora
     from mcga_lm.training.personalise import train
     from mcga_lm.utils import resolve_device, save_json
     from mcga_lm.viz import bootstrap_ci, plot_learning_curve
@@ -49,7 +60,7 @@ def main() -> None:
     vcfg = get_variant("MCGA-LM").apply(cfg)
     model_or_models, report = train(vcfg, personas, backend, epochs=args.epochs, head_epochs=2,
                                     pretrained=args.pretrained, per_persona=args.per_persona)
-    encoder = TurnEncoder(cfg.inputs, reduced_sensor_set=cfg.simulation.reduced_sensor_set)
+    encoder = TurnEncoder(cfg.inputs, reduced_sensor_set=cfg.simulation.reduced_sensor_set, backend=backend)
 
     # RAG-LLM reference line (no personalisation growth).
     rag_cfg = get_variant("RAG-LLM").apply(cfg)
@@ -66,14 +77,23 @@ def main() -> None:
             graph = persona.intake_graph(fraction=0.05, seed=cfg.seed)
             working = IntentMemoryGraph.from_dict(graph.to_dict())
             tau = report.tau_by_persona.get(persona.spec.persona_id, cfg.safety.tau_default)
+            # Sec. 3.6: accepted utterances fine-tune LoRA after a 24-hour queue.
+            queue = LoRAUpdateQueue(hours=cfg.training.lora_queue_hours)
+            if supports_lora(backend):
+                backend.use_adapter(persona.spec.persona_id, create=True, reset=True)
             communicator = AdaptiveCommunicator(
-                model, backend, vcfg, gate=BayesianGate(cfg.safety, tau=tau), device=device
+                model, backend, vcfg, gate=BayesianGate(cfg.safety, tau=tau), device=device,
+                lora_queue=queue,
             )
             accepted_count = 0
             rng = np.random.default_rng(persona.seed)
             recent: List = []
             session_id = 0
             while accepted_count <= max(args.checkpoints):
+                day_h = 24.0 * session_id
+                if session_id and vcfg.llm.lora_personalisation:
+                    flush_queue(backend, queue, day_h, adapter=persona.spec.persona_id,
+                                epochs=cfg.training.lora_epochs, lr=cfg.training.lr)
                 turns = persona.simulate_session(seed=1000 + session_id)
                 session = encoder.encode_session(persona, turns, working, seed=1000 + session_id).to(device)
                 z_ctx, _ = model.encode_context(session.batch)
@@ -89,6 +109,7 @@ def main() -> None:
                         node_scores=node_scores[0:1] if node_scores is not None else None,
                         node_features=node_features[0:1] if node_features is not None else None,
                         rng=rng, update_graph=True,
+                        now_h=day_h + i * cfg.simulation.session_minutes / 60.0 / max(len(turns), 1),
                     )
                     recent.append(res)
                     if res.accepted:

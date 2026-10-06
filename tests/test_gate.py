@@ -33,7 +33,7 @@ def test_tau_grid_matches_section_3_6() -> None:
 
 
 def test_far_is_monotone_in_tau() -> None:
-    """The basis of discrepancy D-01: a larger tau can only admit more candidates."""
+    """The basis of ERRATA E-5: a larger tau can only admit more candidates."""
     rng = np.random.default_rng(0)
     variances = rng.uniform(0, 0.4, 400)
     accepted = variances < 0.10  # low-variance candidates are the good ones
@@ -44,7 +44,7 @@ def test_far_is_monotone_in_tau() -> None:
 
 
 def test_calibration_respects_the_far_budget_and_maximises_coverage() -> None:
-    """Pick the largest tau whose FAR still respects the 5% budget (D-01)."""
+    """``rule="largest"``: the largest tau whose FAR still respects the 5% budget."""
     rng = np.random.default_rng(1)
     variances = rng.uniform(0, 0.4, 2000)
     # A separable population: low-variance candidates are accepted, with 1% label noise.
@@ -70,13 +70,39 @@ def test_infeasible_calibration_falls_back_to_the_strictest_threshold() -> None:
 
 
 def test_literal_rule_of_section_3_6_picks_the_smallest_feasible_tau() -> None:
-    """D-01: the paper's printed rule is implemented but is not the default."""
+    """Sec. 3.6's printed rule is the default; "largest" is the alternative."""
     rng = np.random.default_rng(2)
     variances = rng.uniform(0, 0.4, 400)
     accepted = rng.random(400) < np.clip(1.0 - variances * 3.0, 0, 1)
     smallest, _ = BayesianGate(SafetyConfig()).calibrate(variances, accepted, rule="smallest")
     largest, _ = BayesianGate(SafetyConfig()).calibrate(variances, accepted, rule="largest")
+    default, _ = BayesianGate(SafetyConfig()).calibrate(variances, accepted)
     assert smallest <= largest
+    assert default == smallest
+
+
+def test_printed_rule_returns_the_bottom_of_the_grid_whenever_anything_is_feasible() -> None:
+    """ERRATA E-5: FAR never falls as tau rises, so "the smallest tau with
+    FAR <= 0.05" is the first grid point whenever any grid point qualifies."""
+    rng = np.random.default_rng(1)
+    variances = rng.uniform(0, 0.4, 2000)
+    accepted = (variances < 0.12) ^ (rng.random(2000) < 0.01)
+    gate = BayesianGate(SafetyConfig())
+    tau, _ = gate.calibrate(variances, accepted)
+    assert gate.budget_met is True
+    assert tau == pytest.approx(SafetyConfig().tau_grid_start)
+
+
+def test_defaults_are_the_printed_rules_of_section_3_6() -> None:
+    cfg = SafetyConfig()
+    assert cfg.decision_rule == "variance_only"
+    assert cfg.tau_rule == "smallest"
+    assert cfg.mc_dropout_site == "scoring_head"  # Table 6 / Sec. 4.10; see ERRATA E-12
+
+
+def test_unknown_tau_rule_is_rejected() -> None:
+    with pytest.raises(ValueError):
+        BayesianGate(SafetyConfig()).calibrate([0.01, 0.02], [True, True], rule="median")
 
 
 def test_calibrated_tau_falls_inside_the_grid() -> None:
@@ -184,7 +210,8 @@ def test_guard_reaches_the_far_budget_where_the_printed_rule_cannot() -> None:
     g1.calibrate(variances, accepted, confidences=confidences)
     far1 = _empirical_far(g1, variances, confidences, accepted)
 
-    guarded = SafetyConfig()  # 'guarded' is the default
+    guarded = SafetyConfig()
+    guarded.decision_rule = "guarded"
     g2 = BayesianGate(guarded)
     g2.calibrate(variances, accepted, confidences=confidences)
     far2 = _empirical_far(g2, variances, confidences, accepted)
@@ -207,7 +234,7 @@ def test_guard_does_not_trivially_suppress_everything() -> None:
     degenerate solution is never selected when a useful one exists.
     """
     variances, confidences, accepted = _separable()
-    gate = BayesianGate(SafetyConfig())
+    gate = BayesianGate(SafetyConfig(decision_rule="guarded"))
     gate.calibrate(variances, accepted, confidences=confidences)
     n_passed = sum(1 for v, c in zip(variances, confidences) if gate.decide(v, c).accept)
     assert n_passed > 0.1 * len(variances), "a useful gate must still admit candidates"
@@ -216,7 +243,7 @@ def test_guard_does_not_trivially_suppress_everything() -> None:
 def test_unreachable_budget_falls_back_to_the_tightest_setting() -> None:
     """Failing safe means tightening, not widening."""
     variances, confidences, accepted = _confidently_wrong()
-    cfg = SafetyConfig()
+    cfg = SafetyConfig(decision_rule="guarded")
     gate = BayesianGate(cfg)
     tau, _ = gate.calibrate(variances, accepted, confidences=confidences)
     assert gate.budget_met is False
@@ -242,7 +269,7 @@ def test_guard_is_inert_without_confidences() -> None:
     rng = np.random.default_rng(3)
     variances = rng.uniform(0.0, 0.3, 200).tolist()
     accepted = [v < 0.1 for v in variances]
-    gate = BayesianGate(SafetyConfig())
+    gate = BayesianGate(SafetyConfig(decision_rule="guarded"))
     gate.calibrate(variances, accepted)
     assert gate.confidence_floor == 0.0
 

@@ -1,4 +1,15 @@
+"""Phase IV: structured prompt construction (paper Sec. 3.5).
 
+The prompt is assembled from the four components Sec. 3.5 lists -- user profile,
+cognitive state description, linearised intent sub-graph, dialogue history -- and
+wrapped verbatim as
+
+    [INST] U S T_graph H  Generate a single, appropriate next utterance
+    that the user would say. [/INST]
+
+Decoding temperature is modulated by fatigue (1.2 low -> 0.5 high) with top-p
+0.9, and the number of candidates offered shrinks as reserves deplete.
+"""
 
 from __future__ import annotations
 

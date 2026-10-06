@@ -1,4 +1,19 @@
+"""Synthetic user personas (paper Sec. 4.1).
 
+Sec. 4.1 constructs 20 "Synthetic User Personas" reflecting AAC population
+heterogeneity -- 10 ALS at varying stages, 6 cerebral palsy GMFCS IV-V, 4
+brainstem stroke -- each with a dense personal graph of ~400 nodes encoding
+relationships, routines, medications, preferences and idiomatic phrasing, and
+serving as ground truth for the GAT's active-subgraph retrieval.
+
+The paper's personas were annotated by two certified SLPs and a clinical
+neuropsychologist. These are generated from word pools with the same cohort split
+and graph size; no real user language is involved.
+
+``Persona.accepts`` is the simulated accept/reject of Sec. 3.6, and
+``intake_graph`` is the cold-start graph of Sec. 3.7 -- it keeps every
+interlocutor and withholds a fraction of the remaining entity nodes.
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,12 @@
+"""Experiment runner: Algorithm 1 over every persona and seed (paper Sec. 4.2).
 
+Drives the full turn loop for each system configuration, aggregates the Sec. 4.2
+metric set per persona, and applies the Sec. 3.8 design -- Latin-square
+counterbalancing and five seeded replicates, with mean +/- SD across personas.
+
+The held-out split evaluates against a cold-start intake graph rather than the
+persona's full graph.
+"""
 
 from __future__ import annotations
 
@@ -111,7 +119,9 @@ def run_generative_system(
 ) -> Tuple[SystemResult, List[TurnResult]]:
     """Run Algorithm 1 over every persona and seed, and aggregate (Sec. 4.2)."""
     device = device or torch.device("cpu")
-    encoder = TurnEncoder(cfg.inputs, reduced_sensor_set=cfg.simulation.reduced_sensor_set)
+    encoder = TurnEncoder(
+        cfg.inputs, reduced_sensor_set=cfg.simulation.reduced_sensor_set, backend=backend
+    )
     detector = HallucinationDetector()
     result = SystemResult(name=name, split=split)
     result.notes = "per-persona models" if not isinstance(model, MCGALM) else "single shared model"
@@ -119,6 +129,13 @@ def run_generative_system(
 
     for persona in personas:
         persona_model = _model_for(model, persona.spec.persona_id).eval()
+        if getattr(backend, "supports_lora", False):
+            # The persona's own LoRA adapter (Sec. 3.5), or the shared one for
+            # systems that are not personalised.
+            backend.use_adapter(
+                persona.spec.persona_id if cfg.llm.lora_personalisation else backend.base_adapter,
+                create=False,
+            )
         tau = (taus or {}).get(persona.spec.persona_id, cfg.safety.tau_default)
         # Confidence floor from the FAR guard; absent -> 0.0, i.e. Sec. 3.6's rule.
         floor = (floors or {}).get(persona.spec.persona_id, cfg.safety.confidence_floor)

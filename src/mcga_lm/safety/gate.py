@@ -1,3 +1,25 @@
+"""Phase V: confidence-aware clinical filtering (paper Sec. 3.6).
+
+The decision rule as printed: present the utterance when Var(y_hat) < tau,
+otherwise suppress it and enter Clarification Mode, showing the top-3 intent
+nodes as simplified "Intent Bubbles" selectable with one binary scan. tau is
+calibrated per user against a false-acceptance budget of 5%.
+
+The defaults follow the printed text. Two alternatives are available, because the
+printed text has known defects (both documented in ERRATA.md):
+
+* The calibration rule of Sec. 3.6 ("select the smallest tau with FAR <= 0.05")
+  is trivially satisfied, because FAR is monotone in tau, so it returns the
+  bottom of the grid whenever anything is feasible (E-5).
+  ``SafetyConfig.tau_rule = "largest"`` picks the largest feasible tau instead.
+
+* Gating on variance alone cannot bound FAR. Predictive variance measures whether
+  the MC-Dropout samples agree with *each other*, not whether they are right, so a
+  scoring head that is uniformly confident and uniformly wrong passes every tau in
+  the grid -- the exact failure Table 2 names as the reason to distrust a plain
+  LLM. ``decision_rule="guarded"`` additionally requires a calibrated confidence
+  floor; the default ``"variance_only"`` is Sec. 3.6's rule.
+"""
 
 from __future__ import annotations
 
@@ -115,7 +137,7 @@ class BayesianGate:
         self,
         variances: Sequence[float],
         accepted: Sequence[bool],
-        rule: str = "largest",
+        rule: Optional[str] = None,
         confidences: Optional[Sequence[float]] = None,
     ) -> Tuple[float, List[dict]]:
         """Per-user threshold calibration (Sec. 3.6, "Calibration of the
@@ -123,6 +145,8 @@ class BayesianGate:
 
         ``variances``: Var(y_hat) for each calibration candidate.
         ``accepted``:  whether the simulated user accepted that candidate.
+        ``rule``: ``"smallest"`` (Sec. 3.6) or ``"largest"``; defaults to
+        ``SafetyConfig.tau_rule``.
         ``confidences``: predicted acceptance probability per candidate. Needed
         only by the FAR guard; without it the search collapses to Sec. 3.6's
         one-dimensional sweep over tau.
@@ -179,10 +203,13 @@ class BayesianGate:
             _logger.warning(message)
             return self.tau, trace
 
-        if rule == "smallest":  # literal reading of Sec. 3.6, see D-01
+        rule = rule or getattr(self.cfg, "tau_rule", "smallest")
+        if rule == "smallest":  # Sec. 3.6 as printed (ERRATA.md, E-5)
             best = min(feasible, key=lambda t: (t[2], -t[0]))
-        else:
+        elif rule == "largest":
             best = max(feasible)
+        else:
+            raise ValueError(f"unknown tau rule {rule!r}; expected 'smallest' (Sec. 3.6) or 'largest'")
         _, _, self.tau, floor = best
         self.confidence_floor = floor if use_guard else 0.0
         return self.tau, trace

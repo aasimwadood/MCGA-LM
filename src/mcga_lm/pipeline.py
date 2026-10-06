@@ -1,4 +1,16 @@
+"""The five-phase MCGA-LM pipeline (paper Sec. 3.1, Eq. 1).
 
+Assembles the stages of Sec. 3.2-3.6 into one module:
+
+  I    multimodal contextual grounding     Perceiver IO, Eqs. (2)-(4)
+  II   temporal cognitive adaptation       TFT, Eq. (5)
+  III  personalised intent graph memory    GAT, Eqs. (6)-(7)
+  IV   retrieval-augmented synthesis       structured prompt + LLM
+  V    confidence-aware clinical filtering MC Dropout, Eq. (8)
+
+The objective is Eq. (1): maximise P(I | C, M) subject to a bound on the false
+acceptance rate.
+"""
 
 from __future__ import annotations
 

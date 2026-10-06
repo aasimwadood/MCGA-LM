@@ -1,5 +1,17 @@
 #!/usr/bin/env python3
+"""Ablation study (paper Sec. 4.4, Fig. 4).
 
+    python scripts/run_ablations.py --out runs/
+    python scripts/run_ablations.py --out runs/ --full-factorial
+
+Sec. 4.4 opens by calling its ablation "full-factorial" and then describes
+"removing one component at a time". Those are different designs: one-at-a-time
+gives k+1 conditions, full-factorial gives 2^k. Fig. 4's five bars show the
+one-at-a-time version, which is the default here.
+
+``--full-factorial`` runs all 32 cells, which is the only way to answer the
+interaction question Sec. 5.3 raises. See ERRATA.md.
+"""
 
 from __future__ import annotations
 
@@ -17,7 +29,7 @@ def main() -> None:
     parser.add_argument("--head-epochs", type=int, default=3)
     parser.add_argument("--quick", action="store_true")
     parser.add_argument("--per-persona", action="store_true",
-                        help="fit one model per persona (Sec. 3.7)")
+                        help="fit a separate encoder/GAT per persona (not in the paper)")
     parser.add_argument("--fatigued", action="store_true", help="evaluate under induced fatigue (Sec. 4.5)")
     parser.add_argument("--full-factorial", action="store_true",
                         help="run all 2^k cells rather than one-at-a-time (D-10)")

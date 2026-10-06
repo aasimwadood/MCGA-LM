@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
+"""Fatigue adaptation and its sensitivity (paper Sec. 4.5, 5.4, 5.5, Fig. 5).
 
+    python scripts/run_fatigue_study.py --out runs/
+
+Compares TFT-driven adaptation against a non-adaptive system over a 60-minute
+conversation, then sweeps the fatigue half-life (15-60 min) and the peak factor
+(0.5-0.9) as Sec. 5.5 describes.
+"""
 
 from __future__ import annotations
 
@@ -16,7 +23,7 @@ def main() -> None:
     parser.add_argument("--epochs", type=int, default=None)
     parser.add_argument("--quick", action="store_true")
     parser.add_argument("--per-persona", action="store_true",
-                        help="fit one model per persona (Sec. 3.7)")
+                        help="fit a separate encoder/GAT per persona (not in the paper)")
     args = parser.parse_args()
     cfg = load_config(args)
     if args.quick:

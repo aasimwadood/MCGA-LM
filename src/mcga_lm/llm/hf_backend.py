@@ -15,7 +15,7 @@ the architecture.
 
 from __future__ import annotations
 
-from typing import List, Optional, Sequence
+from typing import List, Optional, Sequence, Tuple
 
 import numpy as np
 
@@ -25,9 +25,24 @@ from .prompt import StructuredPrompt
 
 
 class HFLanguageBackend:
-    """4-bit quantised causal LM with LoRA adapters (Table 3: r = 16, alpha = 32)."""
+    """4-bit quantised causal LM with LoRA adapters (Table 3: r = 16, alpha = 32).
 
-    def __init__(self, cfg: LLMConfig, device: str = "cuda", attach_lora: bool = True) -> None:
+    One LoRA adapter per user (Sec. 3.5, 4.8), each created as a copy of the
+    shared ``base_adapter``. ``model``/``tokenizer`` may be passed in directly,
+    which skips loading from the Hub (used by the tests with a tiny model).
+    """
+
+    supports_lora = True
+    base_adapter = "default"  # peft's name for the first adapter
+
+    def __init__(
+        self,
+        cfg: LLMConfig,
+        device: str = "cuda",
+        attach_lora: bool = True,
+        model=None,
+        tokenizer=None,
+    ) -> None:
         try:
             import torch
             from transformers import AutoModelForCausalLM, AutoTokenizer
@@ -38,9 +53,15 @@ class HFLanguageBackend:
 
         self.cfg = cfg
         self.device = device
-        self.tokenizer = AutoTokenizer.from_pretrained(cfg.model_name)
+        self.active_adapter = self.base_adapter
+        self.tokenizer = tokenizer if tokenizer is not None else AutoTokenizer.from_pretrained(cfg.model_name)
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
+        if model is not None:
+            self.model = attach_lora_adapters(model, cfg) if attach_lora else model
+            self.model.eval()
+            self.embedding_dim = int(self.model.config.hidden_size)
+            return
 
         quant_config = None
         if cfg.quantisation == "nf4":  # Table 3
@@ -69,6 +90,14 @@ class HFLanguageBackend:
             cfg.model_name, quantization_config=quant_config, device_map="auto"
         )
         if attach_lora:
+            if quant_config is not None:
+                # Training LoRA over a 4-bit base (QLoRA) needs the base prepared:
+                # norms in fp32, inputs requiring grad.
+                from peft import prepare_model_for_kbit_training
+
+                self.model = prepare_model_for_kbit_training(
+                    self.model, use_gradient_checkpointing=False
+                )
             self.model = attach_lora_adapters(self.model, cfg)
         self.model.eval()
         self.embedding_dim = int(self.model.config.hidden_size)
@@ -159,6 +188,151 @@ class HFLanguageBackend:
             embeddings = self.model.get_input_embeddings()(ids["input_ids"])
         return embeddings[0].float().cpu().numpy()
 
+    def embed_history(self, history: Sequence[Tuple[str, str]], n_tokens: int) -> np.ndarray:
+        """``x_ling``: the last ``n_tokens`` tokens of dialogue history, embedded
+        "using the same tokeniser as the downstream LLM" (Sec. 3.2). Left-padded
+        with zeros when the history is shorter."""
+        import torch
+
+        out = np.zeros((n_tokens, self.embedding_dim), dtype=np.float32)
+        text = "\n".join(f"{speaker}: {utterance}" for speaker, utterance in history)
+        ids = self.tokenizer(text, add_special_tokens=False)["input_ids"][-n_tokens:] if text else []
+        if not ids:
+            return out
+        with torch.no_grad():
+            emb = self.model.get_input_embeddings()(torch.tensor([ids], device=self.model.device))[0]
+        out[n_tokens - len(ids) :] = emb.float().cpu().numpy()
+        return out
+
+    def utterance_embedding(self, text: str) -> np.ndarray:
+        """``z_utt`` of Eq. (11): "obtained from the frozen LLM's last hidden
+        state", mean-pooled over tokens, with the LoRA adapters switched off."""
+        import torch
+
+        ids = self.tokenizer(text, return_tensors="pt")
+        ids = {k: v.to(self.model.device) for k, v in ids.items()}
+        with torch.no_grad(), self._adapters_disabled():
+            out = self.model(**ids, output_hidden_states=True)
+        return out.hidden_states[-1][0].float().mean(dim=0).cpu().numpy()
+
+    # ------------------------------------------------------------ LoRA -- #
+    def use_adapter(self, name: str, create: bool = False, reset: bool = False) -> str:
+        """Activate a user's adapter (Sec. 3.5: one set of adapters per user).
+
+        ``create`` adds it as a copy of the shared adapter if it does not exist;
+        ``reset`` re-copies it even if it does. Without ``create`` an unknown
+        user falls back to the shared adapter. Returns the active adapter name.
+        """
+        from peft import get_peft_model_state_dict, set_peft_model_state_dict
+
+        adapters = getattr(self.model, "peft_config", None)
+        if adapters is None:
+            raise RuntimeError("LoRA adapters are not attached to this model")
+        if reset and name in adapters and name != self.base_adapter:
+            self.model.set_adapter(self.base_adapter)
+            self.model.delete_adapter(name)
+        if name not in self.model.peft_config:
+            if not create:
+                name = self.base_adapter
+            else:
+                self.model.add_adapter(name, _lora_config(self.cfg))
+                state = get_peft_model_state_dict(self.model, adapter_name=self.base_adapter)
+                set_peft_model_state_dict(self.model, state, adapter_name=name)
+        self.model.set_adapter(name)
+        self.active_adapter = name
+        return name
+
+    def fine_tune(self, pairs: Sequence[Tuple[str, str]], epochs: int, lr: float) -> List[dict]:
+        """Train the active adapter on (prompt, accepted utterance) pairs (Sec. 3.5).
+
+        Causal-LM loss on the utterance tokens only; the prompt is context.
+        Only the active adapter's parameters are updated.
+        """
+        import torch
+
+        tag = f".{self.active_adapter}."
+        params = []
+        for pname, p in self.model.named_parameters():
+            trainable = "lora_" in pname and tag in pname
+            p.requires_grad_(trainable)
+            if trainable:
+                params.append(p)
+        if not params:
+            raise RuntimeError(f"adapter {self.active_adapter!r} has no LoRA parameters")
+        optimiser = torch.optim.AdamW(params, lr=lr)
+        history: List[dict] = []
+        self.model.train()
+        try:
+            for epoch in range(epochs):
+                losses = []
+                for prompt, utterance in pairs:
+                    out = self.model(**self._supervised_example(prompt, utterance, append_eos=True))
+                    optimiser.zero_grad(set_to_none=True)
+                    out.loss.backward()
+                    optimiser.step()
+                    losses.append(float(out.loss.detach()))
+                history.append({"epoch": epoch, "loss": float(np.mean(losses))})
+        finally:
+            self.model.eval()
+        return history
+
+    def mc_dropout(self, prompt: str, utterance: str, n_passes: int) -> Tuple[float, float]:
+        """Eq. (8) with dropout in the LoRA modules (Sec. 3.6).
+
+        Runs ``n_passes`` teacher-forced forward passes over the already-decoded
+        utterance with only the LoRA dropout layers active, and returns
+        ``(Var(y_hat), mean token probability)``: the per-token variance of
+        p(y_l | x, w^(n)) across passes, averaged over the utterance's tokens.
+
+        Freshly created adapters have B = 0, so the LoRA branch contributes
+        nothing and the variance is exactly 0 until the adapter is trained.
+        """
+        import torch
+
+        batch = self._supervised_example(prompt, utterance, append_eos=False)
+        ids = batch["input_ids"]
+        start = int((batch["labels"][0] == -100).sum())
+        if start >= ids.shape[1]:
+            return 0.0, 0.0
+        dropouts = [
+            m for name, m in self.model.named_modules()
+            if "lora_dropout" in name and isinstance(m, torch.nn.Dropout)
+        ]
+        self.model.eval()
+        for m in dropouts:
+            m.train()
+        passes = []
+        try:
+            with torch.no_grad():
+                for _ in range(n_passes):
+                    logits = self.model(input_ids=ids, attention_mask=batch["attention_mask"]).logits[0]
+                    probs = logits[start - 1 : -1].float().softmax(dim=-1)
+                    passes.append(probs.gather(-1, ids[0, start:, None]).squeeze(-1))
+        finally:
+            for m in dropouts:
+                m.eval()
+        stack = torch.stack(passes)  # (N, |y_hat|)
+        variance = stack.var(dim=0, unbiased=True).mean() if n_passes > 1 else stack.new_zeros(())
+        return float(variance), float(stack.mean())
+
+    def _supervised_example(self, prompt: str, utterance: str, append_eos: bool) -> dict:
+        import torch
+
+        p_ids = self.tokenizer(prompt)["input_ids"]
+        u_ids = self.tokenizer(" " + utterance.strip(), add_special_tokens=False)["input_ids"]
+        if append_eos and self.tokenizer.eos_token_id is not None:
+            u_ids = u_ids + [self.tokenizer.eos_token_id]
+        ids = torch.tensor([p_ids + u_ids], device=self.model.device)
+        labels = ids.clone()
+        labels[0, : len(p_ids)] = -100
+        return {"input_ids": ids, "labels": labels, "attention_mask": torch.ones_like(ids)}
+
+    def _adapters_disabled(self):
+        import contextlib
+
+        disable = getattr(self.model, "disable_adapter", None)
+        return disable() if disable is not None else contextlib.nullcontext()
+
 
 _STOPWORDS = frozenset(
     "a an the i me my you your it is am are was were be been do does did to of for "
@@ -222,9 +396,15 @@ def attach_lora_adapters(model, cfg: LLMConfig):
 
     "Only these adapters (~0.1% of parameters) are updated."
     """
-    from peft import LoraConfig, get_peft_model
+    from peft import get_peft_model
 
-    lora = LoraConfig(
+    return get_peft_model(model, _lora_config(cfg))
+
+
+def _lora_config(cfg: LLMConfig):
+    from peft import LoraConfig
+
+    return LoraConfig(
         r=cfg.lora_rank,
         lora_alpha=cfg.lora_alpha,
         lora_dropout=cfg.lora_dropout,
@@ -232,7 +412,6 @@ def attach_lora_adapters(model, cfg: LLMConfig):
         bias="none",
         task_type="CAUSAL_LM",
     )
-    return get_peft_model(model, lora)
 
 
 def build_backend(cfg: LLMConfig, device: str = "cpu", embedding_dim: Optional[int] = None):
@@ -256,7 +435,7 @@ def build_backend(cfg: LLMConfig, device: str = "cpu", embedding_dim: Optional[i
         if embedding_dim is not None and backend.embedding_dim != embedding_dim:
             raise ValueError(
                 f"inputs.ling_dim is {embedding_dim} but {cfg.model_name} has hidden size "
-                f"{backend.embedding_dim}; set inputs.ling_dim to match (configs/llm_hf.yaml)"
+                f"{backend.embedding_dim}; set inputs.ling_dim to match (4096 for LLaMA-3-8B)"
             )
         return backend
     raise ValueError(f"unknown LLM backend {cfg.backend!r}; expected 'template' or 'hf'")

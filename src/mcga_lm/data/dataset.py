@@ -1,3 +1,9 @@
+"""Materialising X_t for simulated turns (paper Sec. 3.2, Eq. 2).
+
+Builds the physiological, behavioural, environmental and linguistic arrays of
+Eq. (2), applies the Sec. 3.9 sensor switchboard, and forms the sliding windows
+of W = 32 contextual embeddings the TFT consumes.
+"""
 
 from __future__ import annotations
 
@@ -39,15 +45,23 @@ class SessionTensors:
 
 
 class TurnEncoder:
-    """Materialises ``X_t`` (Eq. 2) for simulated turns."""
+    """Materialises ``X_t`` (Eq. 2) for simulated turns.
+
+    With a language ``backend``, ``x_ling`` is embedded with the LLM's own
+    tokeniser (Sec. 3.2) and ``z_utt`` comes from the frozen LLM (Eq. 11).
+    Without one, both fall back to word-level lexeme embeddings, which is
+    exactly what the template backend produces.
+    """
 
     def __init__(
         self,
         dims: InputDims,
         reduced_sensor_set: bool = False,
         switchboard=None,
+        backend=None,
     ) -> None:
         self.dims = dims
+        self.backend = backend
         # Sec. 3.9: sensing is under the user's control, so the switchboard
         # travels with the encoder that materialises X_t.
         self.physio = PhysiologySynthesiser(
@@ -74,6 +88,8 @@ class TurnEncoder:
     def encode_history(self, history: Sequence[Tuple[str, str]]) -> np.ndarray:
         """``x_ling``: the last L = 10 tokens of dialogue history (Sec. 3.2)."""
         d = self.dims
+        if self.backend is not None:
+            return self.backend.embed_history(history, d.ling_tokens)
         tokens: List[str] = []
         for speaker, text in history:
             tokens.extend([speaker.lower()] + text.lower().replace(".", "").split())
@@ -106,9 +122,11 @@ class TurnEncoder:
             for name in t.intent.entities:
                 if graph.has_node(name):
                     targets[i, graph.node_id(name)] = 1.0
-        utt = torch.from_numpy(
-            np.stack([_pool_utterance(t.intent.reference, self.dims.ling_dim) for t in turns])
-        )
+        if self.backend is not None:
+            pooled = [self.backend.utterance_embedding(t.intent.reference) for t in turns]
+        else:
+            pooled = [_pool_utterance(t.intent.reference, self.dims.ling_dim) for t in turns]
+        utt = torch.from_numpy(np.stack(pooled).astype(np.float32))
         return SessionTensors(
             batch=batch,
             fatigue=fatigue,

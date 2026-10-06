@@ -5,15 +5,19 @@ interview and the model is personalised on accepted utterances, continuing
 on-device throughout the product lifetime.
 
 This stage fits the Perceiver/TFT/GAT against Eq. (9), trains the intent-scoring
-head, and calibrates tau per persona against the 5% false-acceptance budget of
-Sec. 3.6.
+head, calibrates tau per persona against the 5% false-acceptance budget of
+Sec. 3.6, and then fine-tunes each persona's own LoRA adapter on the utterances
+that persona accepted (Sec. 3.5; 3 epochs per user, Sec. 4.8). Calibration comes
+first because Sec. 3.6 places it in "the initial 30-minute session", before any
+LoRA update has left the 24-hour queue.
 
 Session seeds are disjoint by role so calibration never sees training turns:
 ``TRAIN_SEEDS`` for representation learning, ``CALIBRATION_SEED`` for tau.
 
-Sec. 3.7 describes one model per user. ``per_persona=True`` does that; the
-default fits a single shared model across all personas, which is cheaper and is
-the configuration in which retrieval has been observed to under-fit.
+The encoder, TFT and GAT are shared across personas by default, which matches
+Sec. 3.7's "no per-person fine-tuning for synthetic evaluation". tau and the LoRA
+adapters are per user in either mode. ``per_persona=True`` additionally fits a
+separate encoder/GAT per persona; the paper does not describe that.
 """
 
 from __future__ import annotations
@@ -40,6 +44,12 @@ from ..pipeline import MCGALM
 from ..safety.gate import BayesianGate
 from ..seed import set_seed
 from ..utils import get_logger, resolve_device
+from .lora import personalise as personalise_lora
+from .lora import supports_lora
+
+# One scoring example: (context, token embeddings, accepted?, rendered prompt,
+# utterance). The last two feed LoRA training and LoRA-site MC Dropout.
+ScoringExample = Tuple[torch.Tensor, torch.Tensor, float, str, str]
 
 logger = get_logger(__name__)
 
@@ -62,6 +72,9 @@ class TrainingReport:
     # a safety result and must not be left to a log line.
     far_budget_missed: set = field(default_factory=set)
     per_persona: bool = False
+    # Per-user LoRA fine-tuning (Sec. 3.5): pairs used, loss per epoch, or why
+    # it was skipped (the template backend has no adapters).
+    lora_by_persona: Dict[str, dict] = field(default_factory=dict)
 
     def summary(self) -> Dict[str, float]:
         taus = list(self.tau_by_persona.values())
@@ -190,7 +203,7 @@ def collect_scoring_examples(
     cfg: Config,
     device: torch.device,
     seed: int,
-) -> List[Tuple[torch.Tensor, torch.Tensor, float]]:
+) -> List[ScoringExample]:
     """Roll out generation on a session and label each candidate accept/reject."""
     rng = np.random.default_rng(seed)
     features, edge_index, edge_weight = graph_tensors(persona.graph, device)
@@ -202,7 +215,7 @@ def collect_scoring_examples(
     if model.gat is not None:
         node_features, node_scores = model.attend_graph(features, edge_index, query, edge_weight)
 
-    examples: List[Tuple[torch.Tensor, torch.Tensor, float]] = []
+    examples: List[ScoringExample] = []
     for i, turn in enumerate(session.turns):
         ids: List[int] = []
         if node_scores is not None:
@@ -231,18 +244,19 @@ def collect_scoring_examples(
             continue
         sub_features = node_features[i, ids, :] if (node_features is not None and ids) else None
         context = model.scoring_context(query[i : i + 1], sub_features)
+        prompt_text = prompt.render()
         for cand in candidates[:2]:  # the top candidates are the ones ever shown
             tokens = torch.from_numpy(
                 backend.embed_tokens(cand.text, cfg.llm.max_new_tokens)
             ).unsqueeze(0).to(device)
             label = float(persona.accepts(cand.function, cand.entities, turn.intent, rng))
-            examples.append((context.detach().cpu(), tokens.detach().cpu(), label))
+            examples.append((context.detach().cpu(), tokens.detach().cpu(), label, prompt_text, cand.text))
     return examples
 
 
 def train_scoring_head(
     model: MCGALM,
-    examples: Sequence[Tuple[torch.Tensor, torch.Tensor, float]],
+    examples: Sequence[ScoringExample],
     cfg: Config,
     device: torch.device,
     epochs: int = 5,
@@ -264,7 +278,7 @@ def train_scoring_head(
         for start in range(0, len(order), batch_size):
             chunk = [examples[i] for i in order[start : start + batch_size]]
             loss = torch.zeros((), device=device)
-            for context, tokens, label in chunk:
+            for context, tokens, label, *_ in chunk:
                 probs = head(context.to(device), tokens.to(device))
                 target = torch.full_like(probs, float(label))
                 loss = loss + F.binary_cross_entropy(probs, target)
@@ -285,7 +299,7 @@ def calibrate_thresholds(
     cfg: Config,
     device: torch.device,
     encoder: TurnEncoder,
-    rule: str = "largest",
+    rule: Optional[str] = None,
 ) -> Tuple[Dict[str, float], Dict[str, float], Dict[str, list], set]:
     """Per-persona threshold calibration (paper Sec. 3.6).
 
@@ -295,12 +309,21 @@ def calibrate_thresholds(
 
     "tau is calibrated per user during the initial 30-minute session: collect
     ~50 low-confidence candidates ... compute FAR on held-out data ... select
-    [the] tau with FAR <= 0.05." See D-01 in safety/gate.py about ``rule``.
+    [the] smallest tau with FAR <= 0.05." ``rule`` defaults to
+    ``SafetyConfig.tau_rule``; see safety/gate.py and ERRATA.md, E-5.
+
+    Var(y_hat) comes from wherever ``SafetyConfig.mc_dropout_site`` says Eq. (8)
+    runs, so tau is calibrated on the same quantity the gate will see.
     """
     taus: Dict[str, float] = {}
     floors: Dict[str, float] = {}
     traces: Dict[str, list] = {}
     missed: set = set()
+    lora_site = cfg.safety.mc_dropout_site == "lora"
+    if supports_lora(backend):
+        # Calibration is the initial session, before any personal adapter
+        # exists, so it runs on the shared one.
+        backend.use_adapter(backend.base_adapter, create=False)
     for persona in personas:
         turns = persona.simulate_session(
             seed=CALIBRATION_SEED, n_turns=max(cfg.safety.calibration_samples // 2, 10)
@@ -312,12 +335,16 @@ def calibrate_thresholds(
         variances: List[float] = []
         confidences: List[float] = []
         accepted: List[bool] = []
-        for context, tokens, label in examples[: cfg.safety.calibration_samples]:
-            estimate = model.uncertainty(context.to(device), tokens.to(device))
-            variances.append(float(estimate.variance[0]))
+        for context, tokens, label, prompt_text, utterance in examples[: cfg.safety.calibration_samples]:
+            if lora_site:
+                variance, confidence = backend.mc_dropout(prompt_text, utterance, cfg.safety.mc_passes)
+            else:
+                estimate = model.uncertainty(context.to(device), tokens.to(device))
+                variance, confidence = float(estimate.variance[0]), float(estimate.confidence[0])
+            variances.append(variance)
             # The FAR guard calibrates a confidence floor alongside tau, so the
-            # head's predicted acceptance probability has to be kept too.
-            confidences.append(float(estimate.confidence[0]))
+            # predicted acceptance probability has to be kept too.
+            confidences.append(confidence)
             accepted.append(bool(label))
         gate = BayesianGate(cfg.safety)
         if variances:
@@ -325,7 +352,7 @@ def calibrate_thresholds(
             if gate.budget_met is False:
                 missed.add(persona.spec.persona_id)
                 logger.warning(
-                    "persona %s: no (tau, floor) setting met the %.0f%% FAR budget",
+                    "persona %s: no gate setting met the %.0f%% FAR budget",
                     persona.spec.persona_id, cfg.safety.far_budget * 100,
                 )
         else:
@@ -357,9 +384,10 @@ def train(
     """Run stage 3 end to end.
 
     Returns a single model, or -- with ``per_persona=True`` -- a mapping from
-    persona id to that person's own model, which is the deployment story the
-    paper describes (Sec. 3.7). Both are accepted by
-    :func:`mcga_lm.eval.runner.run_generative_system`.
+    persona id to that person's own model. Both are accepted by
+    :func:`mcga_lm.eval.runner.run_generative_system`. Either way each persona
+    gets its own tau and, when the backend has LoRA adapters and
+    ``LLMConfig.lora_personalisation`` is on, its own adapter (Sec. 3.5).
     """
     if per_persona:
         return _train_per_persona(
@@ -368,6 +396,8 @@ def train(
     set_seed(cfg.seed)
     device = resolve_device(cfg.training.device)
     model = MCGALM(cfg).to(device)
+    if supports_lora(backend):
+        backend.use_adapter(backend.base_adapter, create=False)
 
     if pretrained:
         state = torch.load(pretrained, map_location=device, weights_only=False)
@@ -396,7 +426,9 @@ def train(
             "so the fatigue index carries no physiological meaning. Run scripts/pretrain_encoder.py first."
         )
 
-    encoder = TurnEncoder(cfg.inputs, reduced_sensor_set=cfg.simulation.reduced_sensor_set)
+    encoder = TurnEncoder(
+        cfg.inputs, reduced_sensor_set=cfg.simulation.reduced_sensor_set, backend=backend
+    )
     sessions = build_sessions(personas, cfg, TRAIN_SEEDS, encoder)
     # Stage 3 fits the GAT. It must not borrow the LoRA epoch count.
     n_epochs = epochs if epochs is not None else cfg.training.representation_epochs
@@ -405,15 +437,22 @@ def train(
         model, personas, sessions, cfg, device, n_epochs, include_fatigue_loss
     )
 
-    examples: List[Tuple[torch.Tensor, torch.Tensor, float]] = []
+    examples: List[ScoringExample] = []
+    accepted_pairs: Dict[str, List[Tuple[str, str]]] = {}
     for persona in personas:
-        for k, session in enumerate(sessions[persona.spec.persona_id]):
-            examples.extend(
-                collect_scoring_examples(model, backend, persona, session, cfg, device, seed=TRAIN_SEEDS[k])
+        pid = persona.spec.persona_id
+        for k, session in enumerate(sessions[pid]):
+            rolled = collect_scoring_examples(model, backend, persona, session, cfg, device, seed=TRAIN_SEEDS[k])
+            examples.extend(rolled)
+            # Sec. 3.5: adapters are trained "on the user's accepted utterances
+            # paired with their prompts".
+            accepted_pairs.setdefault(pid, []).extend(
+                (prompt_text, utterance) for _, _, label, prompt_text, utterance in rolled if label
             )
     head_history = train_scoring_head(model, examples, cfg, device, epochs=head_epochs)
 
     taus, floors, traces, missed = calibrate_thresholds(model, backend, personas, cfg, device, encoder)
+    lora_reports = _personalise_adapters(backend, personas, accepted_pairs, cfg)
 
     report = TrainingReport(
         epochs=n_epochs,
@@ -424,6 +463,7 @@ def train(
         far_budget_missed=missed,
         tau_trace=traces,
         per_persona=False,
+        lora_by_persona=lora_reports,
     )
     if out_dir:
         path = Path(out_dir)
@@ -433,7 +473,44 @@ def train(
             path / "mcga_lm.pt",
         )
         logger.info("saved model to %s", path / "mcga_lm.pt")
+        _save_adapters(backend, lora_reports, path)
     return model, report
+
+
+def _personalise_adapters(
+    backend,
+    personas: Sequence[Persona],
+    accepted_pairs: Mapping[str, Sequence[Tuple[str, str]]],
+    cfg: Config,
+) -> Dict[str, dict]:
+    """Fit each persona's LoRA adapter on its accepted utterances (Sec. 3.5, 4.8).
+
+    Sec. 4.8: "LoRA fine-tuning converges in 3 epochs per user". The paper gives
+    no LoRA learning rate, so its only stated rate (Sec. 4.8, 1e-4) is used.
+    """
+    reports: Dict[str, dict] = {}
+    for persona in personas:
+        pid = persona.spec.persona_id
+        if not cfg.llm.lora_personalisation:
+            reports[pid] = {"adapter": pid, "skipped": "lora_personalisation is off for this system"}
+            continue
+        reports[pid] = personalise_lora(
+            backend,
+            list(accepted_pairs.get(pid, ())),
+            adapter=pid,
+            epochs=cfg.training.lora_epochs,
+            lr=cfg.training.lr,
+        )
+    if supports_lora(backend):
+        backend.use_adapter(backend.base_adapter, create=False)
+    return reports
+
+
+def _save_adapters(backend, lora_reports: Mapping[str, dict], path: Path) -> None:
+    trained = [pid for pid, r in lora_reports.items() if "history" in r]
+    if trained and supports_lora(backend):
+        backend.model.save_pretrained(str(path / "lora_adapters"), selected_adapters=trained)
+        logger.info("saved %d LoRA adapters to %s", len(trained), path / "lora_adapters")
 
 
 def _train_per_persona(
@@ -446,11 +523,12 @@ def _train_per_persona(
     out_dir: Optional[str],
     include_fatigue_loss: bool,
 ) -> Tuple[Dict[str, MCGALM], TrainingReport]:
-    """Fit one model per persona (paper Sec. 3.7's on-device personalisation).
+    """Fit a separate encoder/TFT/GAT per persona.
 
-    Each persona is trained in isolation on its own sessions and gets its own
-    calibrated tau. Cost is linear in the number of personas; the shared-model
-    path exists for exactly that reason.
+    Each persona is trained in isolation on its own sessions. The paper does not
+    describe this: Sec. 3.7 gives the TFT "no per-person fine-tuning for synthetic
+    evaluation", and only tau and the LoRA adapters are per user, which the
+    shared path already does. Cost is linear in the number of personas.
     """
     models: Dict[str, MCGALM] = {}
     combined = TrainingReport(epochs=epochs or cfg.training.representation_epochs, per_persona=True)
@@ -473,6 +551,7 @@ def _train_per_persona(
         combined.floor_by_persona.update(report.floor_by_persona)
         combined.far_budget_missed |= report.far_budget_missed
         combined.tau_trace.update(report.tau_trace)
+        combined.lora_by_persona.update(report.lora_by_persona)
         if report.history:
             combined.history.append({"persona": pid, **report.history[-1]})
         if report.head_history:
@@ -490,4 +569,5 @@ def _train_per_persona(
             path / "mcga_lm_per_persona.pt",
         )
         logger.info("saved %d per-persona models to %s", len(models), path / "mcga_lm_per_persona.pt")
+        _save_adapters(backend, combined.lora_by_persona, path)
     return models, combined

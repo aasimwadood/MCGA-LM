@@ -1,4 +1,13 @@
+"""Training objectives (paper Sec. 3.10, Eqs. 9-13).
 
+    Eq. (9)   L_total      = L_fatigue + l1 L_contrastive + l2 L_recon + l3 L_intent
+    Eq. (10)  L_fatigue    = (1/T) sum_t (f_hat_t - f_t)^2
+    Eq. (11)  L_contrastive= -log exp(sim(z_ctx, z_utt)/tau_c) / sum_neg ...
+    Eq. (12)  L_recon      = (1/|x_phys|) || x_phys - Decoder(Z) ||_2^2
+    Eq. (13)  L_intent     = - sum_i y_i log y_hat_i
+
+with lambda = (0.5, 0.3, 1.0) and tau_c = 0.07 (Sec. 3.10).
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,13 @@
+"""The 24-function pragmatic taxonomy of the AAC-Intent-Corpus (paper Sec. 4.1).
 
+Sec. 4.1 describes "5,000 intent-utterance pairs spanning a 24-function pragmatic
+taxonomy" and names three of the functions: request_object, express_pain and
+social_greeting. The remaining 21 are this repository's; only the count and the
+three named members are fixed by the paper.
+
+Also holds the Intent Bubble labels of Sec. 3.6 ("Pain", "Thirsty", "Bed") and
+the slot type each function expects.
+"""
 
 from __future__ import annotations
 

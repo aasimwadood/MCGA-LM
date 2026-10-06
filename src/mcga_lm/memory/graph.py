@@ -1,4 +1,18 @@
+"""Phase III: the Dynamic User Intent Graph (paper Sec. 3.4).
 
+A directed multigraph G = (V, E, R) stored on-device and updated from accepted
+utterances:
+
+  * nodes in four categories -- Person, Object, Activity, AbstractState -- each
+    initialised with a 300-dimensional embedding (Table 3);
+  * six typed relations: interacts_with, located_in, causes, associated_with,
+    precedes, expressed_as;
+  * edge weights in [0, 1] decaying with a 30-day half-life unless reinforced,
+    with infrequent edges pruned.
+
+Creation and pruning balance at a steady state of 200-500 nodes (Sec. 3.4,
+Sec. 4.10), which bounds on-device storage to well under 1 MB per user.
+"""
 
 from __future__ import annotations
 

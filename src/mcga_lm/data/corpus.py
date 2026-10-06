@@ -1,4 +1,15 @@
+"""AAC-Intent-Corpus stand-in (paper Sec. 4.1).
 
+Sec. 4.1 curates "5,000 intent-utterance pairs spanning a 24-function pragmatic
+taxonomy, sourced from anonymised AAC user forums (with permission),
+speech-language-pathologist role-plays, and 10 volunteers role-playing
+motor-speech impairment scenarios; split 70/15/15".
+
+That corpus is not public and cannot be reconstructed. This is a synthetic
+substitute of the same shape -- 5,000 pairs, 24 functions, 70/15/15 -- so the
+bigram baseline and the reference side of BLEU/ROUGE have something to run
+against. It contains no real user language.
+"""
 
 from __future__ import annotations
 

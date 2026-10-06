@@ -1,4 +1,18 @@
+"""Signal preprocessing (paper Sec. 4.1, "Preprocessing Pipeline").
 
+  * EEG      band-pass 0.5-40 Hz, 2-s windows with 50% overlap, log band power
+             for delta/theta/alpha/beta
+  * GSR/EDA  tonic/phasic decomposition -> SCL and SCR rate
+  * HRV      SDNN, RMSSD, pNN50, LF/HF from ectopic-corrected R-R over 60-s windows
+  * Gaze     IV-T velocity filter -> fixation / saccade / blink features
+  * Env      ambient noise (dB SPL), discretised GPS location, cyclic time of day
+  * All      per-persona z-scoring against a session-start resting baseline,
+             then T = 30 s windows with a 5-s stride for the TFT
+  * Windows with > 30% artifact contamination are dropped, applied uniformly
+
+Artifact Subspace Reconstruction and ICA are not implemented: they need MNE-grade
+tooling and real recordings. A contamination proxy drives window rejection.
+"""
 
 from __future__ import annotations
 

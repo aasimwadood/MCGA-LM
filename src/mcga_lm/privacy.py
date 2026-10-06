@@ -1,4 +1,31 @@
+"""Privacy, safety and user control (paper Sec. 3.9).
 
+Sec. 3.9 makes three commitments that are about what the *device* must let a
+user do, rather than about model quality:
+
+* **User control over sensing.** "Each sensor can be independently disabled from
+  the settings interface. Disabling EEG, for example, reverts the TFT to
+  EDA+HRV only and triggers a persistent (dismissible, session-recurring)
+  warning that adaptation accuracy may decrease (observed SACT increase from
+  3.1 to 4.2 in post-hoc analysis)."  :class:`SensorSwitchboard`.
+
+* **Data deletion.** "A physical switch (or software button with hardware
+  confirmation) cryptographically and irreversibly erases all user data -- the
+  personal intent graph, LoRA adapter weights, and stored physiological
+  features."  :class:`EncryptedUserStore`.
+
+* **Not a medical device.** "MCGA-LM does not perform health monitoring,
+  diagnosis, or alerting for conditions such as seizures, arrhythmias, or sleep
+  apnoea; users are informed of this during setup."
+  :data:`MEDICAL_DEVICE_DISCLAIMER`, :func:`assert_not_medical_device`.
+
+**Scope.** This is the policy surface, exercised against simulated users. It is
+not a security implementation: the erase path uses the standard library, runs in
+this process's memory, and has no secure element, no authenticated cipher and no
+hardware-confirmed physical switch. What it does give is the structure Sec. 3.9
+describes -- data at rest is reachable through one key, so destroying the key
+destroys the data -- so the claim is testable rather than aspirational.
+"""
 
 from __future__ import annotations
 

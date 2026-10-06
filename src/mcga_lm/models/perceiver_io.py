@@ -1,3 +1,11 @@
+"""Phase I: multimodal contextual grounding (paper Sec. 3.2, Eqs. 2-4; Table 3).
+
+A Perceiver IO encoder compresses the asynchronous input set X_t of Eq. (2) --
+EEG/HRV/EDA, gaze, environment and dialogue history -- into a fixed M x D latent
+array (Table 3: 256 x 512), then mean-pools it to the contextual embedding
+z_ctx,t. Cost is independent of input length, which is what makes real-time
+operation on an edge device possible (Sec. 4.9).
+"""
 
 from __future__ import annotations
 

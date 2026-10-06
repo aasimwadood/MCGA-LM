@@ -1,4 +1,17 @@
+"""A weight-free template realiser standing in for the paper's LLM.
 
+DEVIATION. The paper uses LLaMA-3-8B (Table 3). This backend reproduces the
+*interfaces* the architecture needs -- fatigue-modulated temperature, nucleus
+sampling, retrieval conditioning, token embeddings for the scoring head -- so the
+pipeline runs on CPU with no model weights. It reproduces none of the fluency,
+world knowledge or failure modes of an 8B model, so BLEU/ROUGE and hallucination
+numbers from it describe the pipeline, not LLaMA-3.
+
+How strongly retrieval outranks global lexicon statistics is a free parameter
+here with no counterpart in the paper, and the hallucination rate is sensitive to
+it; ``scripts/sensitivity_grounding.py`` prints the whole surface rather than one
+tuned point.
+"""
 
 from __future__ import annotations
 
@@ -53,6 +66,9 @@ GLOBAL_LEXICON: Dict[str, Tuple[str, ...]] = {
 
 class TemplateLanguageBackend:
     """Deterministic, weight-free stand-in for the paper's LLM (Sec. 3.5)."""
+
+    # No weights, so no LoRA personalisation and no LoRA-site MC Dropout.
+    supports_lora = False
 
     def __init__(
         self,
@@ -150,6 +166,25 @@ class TemplateLanguageBackend:
         if not toks:
             return np.zeros((1, self.embedding_dim), dtype=np.float32)
         return np.stack([embed_lexeme(t, self.embedding_dim) for t in toks]).astype(np.float32)
+
+    def embed_history(self, history: Sequence[Tuple[str, str]], n_tokens: int) -> np.ndarray:
+        """``x_ling``: the last ``n_tokens`` words of dialogue history, speaker
+        labels included, left-padded with zeros (Sec. 3.2)."""
+        tokens: List[str] = []
+        for speaker, text in history:
+            tokens.extend([speaker.lower()] + text.lower().replace(".", "").split())
+        tokens = tokens[-n_tokens:] if n_tokens else []
+        out = np.zeros((n_tokens, self.embedding_dim), dtype=np.float32)
+        for i, tok in enumerate(tokens):
+            out[n_tokens - len(tokens) + i] = embed_lexeme(tok, self.embedding_dim)
+        return out
+
+    def utterance_embedding(self, text: str) -> np.ndarray:
+        """``z_utt`` of Eq. (11): mean of the utterance's word embeddings."""
+        toks = text.lower().replace(".", "").replace("?", "").split()
+        if not toks:
+            return np.zeros(self.embedding_dim, dtype=np.float32)
+        return np.stack([embed_lexeme(t, self.embedding_dim) for t in toks]).mean(axis=0).astype(np.float32)
 
 
 class _Candidate:

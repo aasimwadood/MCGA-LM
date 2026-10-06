@@ -66,3 +66,41 @@ def test_yaml_roundtrip(tmp_path, cfg: Config) -> None:
     path = tmp_path / "cfg.yaml"
     cfg.save(path)
     assert Config.load(path).to_dict() == cfg.to_dict()
+
+
+def test_defaults_follow_the_paper_where_it_is_explicit(cfg: Config) -> None:
+    """The printed method is the default; departures from it are opt-in."""
+    assert cfg.llm.backend == "hf"  # LLaMA-3-8B, Sec. 3.5 / Table 3
+    assert cfg.inputs.ling_dim == 4096  # d_w = LLaMA-3-8B hidden size, Sec. 3.2
+    assert cfg.graph.attention_form == "paper"  # Eq. (7) as printed
+    assert cfg.graph.node_scoring == "incoming"  # what Eq. (13) supervises
+    assert cfg.safety.decision_rule == "variance_only"  # Sec. 3.6
+    assert cfg.safety.tau_rule == "smallest"  # Sec. 3.6
+    assert cfg.training.lora_epochs == 3  # Sec. 4.8, per user
+    assert cfg.training.lora_queue_hours == 24.0  # Sec. 3.6
+    assert cfg.llm.lora_personalisation is True  # Sec. 3.5
+
+
+def test_llm_only_baseline_is_not_personalised(cfg: Config) -> None:
+    """Sec. 4.3: LLM-Only is "prompted with only dialogue history and a brief user profile"."""
+    from mcga_lm.baselines.variants import get_variant
+
+    assert get_variant("LLM-Only").apply(cfg).llm.lora_personalisation is False
+    assert get_variant("M-LLM").apply(cfg).llm.lora_personalisation is True
+
+
+def test_shipped_yaml_configs_match_the_code_defaults(cfg: Config) -> None:
+    """configs/default.yaml is the dataclass defaults; configs/cpu.yaml differs
+    only in the language backend, d_w and its name."""
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1] / "configs"
+    assert Config.load(root / "default.yaml").to_dict() == cfg.to_dict()
+    cpu = Config.load(root / "cpu.yaml").to_dict()
+    expected = cfg.to_dict()
+    expected["name"] = "mcga-lm-cpu"
+    expected["llm"]["backend"] = "template"
+    expected["inputs"]["ling_dim"] = 256
+    assert cpu == expected
+    for path in sorted(root.glob("**/*.yaml")):
+        Config.load(path)  # every shipped config must still parse

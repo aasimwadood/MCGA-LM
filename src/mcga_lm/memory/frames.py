@@ -1,4 +1,10 @@
+"""Semantic-frame extraction from accepted utterances (paper Sec. 3.4).
 
+Sec. 3.4: "a lightweight dependency parser extracts its semantic frame and
+updates the graph". The paper does not name the parser; this is a lexicon and
+graph-linking rule-based extractor behind a ``FrameExtractor`` protocol, so
+spaCy or Stanza can be swapped in.
+"""
 
 from __future__ import annotations
 

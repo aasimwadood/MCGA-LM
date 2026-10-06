@@ -1,3 +1,5 @@
+"""Evaluation: metrics, hallucination detection, statistics, cost, runner.
+"""
 
 from .cost import CostReport, cost_report, decoder_flops, peak_memory_bytes
 from .hallucination import HallucinationDetector, HallucinationKind, HallucinationVerdict, summarise

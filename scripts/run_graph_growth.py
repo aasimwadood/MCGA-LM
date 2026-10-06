@@ -1,5 +1,18 @@
 #!/usr/bin/env python3
+"""Growth of the intent graph over accepted utterances (paper Sec. 4.10).
 
+    python scripts/run_graph_growth.py --out runs/ --from-intake
+
+Sec. 4.10 argues the graph cannot grow without bound, via sub-linear node
+creation and a creation/pruning steady state at 200-500 nodes, under 1 MB per
+user. The storage bound is a unit test; the other two are claims about dynamics
+and need a run.
+
+Use ``--from-intake``. Run against the finished ~400-node persona graphs, every
+claim passes trivially, because the graph is already inside the steady-state band
+and no growth phase is observed -- the script flags that case rather than taking
+credit for it.
+"""
 
 from __future__ import annotations
 

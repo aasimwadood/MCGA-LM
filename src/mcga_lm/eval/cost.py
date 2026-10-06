@@ -1,3 +1,21 @@
+"""Analytic computational cost of one communicative turn (paper Sec. 4.9).
+
+Sec. 4.9 makes four quantitative claims that are analytic rather than measured,
+and this module computes them so they can be checked against the hardware:
+
+1. Decode dominates: ~2PL FLOPs, i.e. ~0.32 TFLOP for P = 8e9 and L = 20 tokens.
+2. The perception stack is cheap and does not grow with the input: Perceiver IO
+   is O(MND + M^2 D) with a fixed latent array, the TFT O(W^2 D_c), and GAT
+   retrieval O(|E_active| K D_h) over the active neighbourhood only.
+3. Uncertainty is not a 20x multiplier: the N = 20 passes hit the scoring head
+   alone, keeping it at ~12% of the budget.
+4. It fits: peak memory 5.6 GB in the 4-bit configuration, inside the Jetson AGX
+   Orin's 32 GB envelope.
+
+Nothing here is measured. Analytic FLOP share and measured wall-clock share are
+not expected to agree -- decode is memory-bandwidth bound and the small perception
+kernels are latency bound.
+"""
 
 from __future__ import annotations
 

@@ -1,4 +1,26 @@
+"""Phase III: intent activation via graph attention (paper Sec. 3.4, Eqs. 6-7).
 
+A query-conditioned multi-head GAT attends over the personal intent graph and
+selects the Active Intent Sub-graph -- the top K_top = 5 nodes (Table 3).
+
+Two readings of the printed equations are implemented, both selectable:
+
+DISCREPANCY -- Eq. (7) is (almost) query-independent as printed.
+``a^T [W_q q || W_h h_i || W_h h_j]`` expands into three additive terms, so the
+query term is constant within the neighbourhood the softmax normalises over and
+cancels exactly when the LeakyReLU is replaced by the identity. Attention -- and
+the sub-graph built from it -- is then essentially independent of q_t, which
+contradicts the paper's own sentence that "the query-dependent attention ensures
+that only nodes relevant to the current conversation and user state receive high
+scores". ``GraphConfig.attention_form`` defaults to ``"paper"`` (as printed);
+``"query_gated"`` adds a multiplicative query term that is not in the paper.
+
+DISCREPANCY -- "aggregated attention score" is degree-dominated. Read literally,
+summing the attention a node *receives* ranks nodes largely by degree, making the
+sub-graph nearly constant across turns. ``GraphConfig.node_scoring`` defaults to
+that literal reading, ``"incoming"``, which is also what Eq. (13) supervises;
+``"query"`` scores nodes by query-to-node attention, which is not in the paper.
+"""
 
 from __future__ import annotations
 

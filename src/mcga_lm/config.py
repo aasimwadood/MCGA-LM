@@ -1,4 +1,11 @@
+"""Configuration objects for MCGA-LM.
 
+Every default here is traceable to the paper; the comment on each field gives the
+section or table. Values marked ASSUMPTION are not fixed by the paper text.
+
+Reference: Al-Nefaie et al., "MCGA-LM: Multimodal Context Graph-Augmented
+Language Model for Adaptive Intent Reconstruction in Assistive Communication".
+"""
 
 from __future__ import annotations
 
@@ -56,7 +63,10 @@ class InputDims:
 
     # x_ling: last L = 10 tokens embedded with the LLM tokeniser
     ling_tokens: int = 10  # L, Sec. 3.2
-    ling_dim: int = 256  # d_w. A-02: 4096 for LLaMA-3; 256 for the template backend
+    # d_w: history is "embedded using the same tokeniser as the downstream LLM"
+    # (Sec. 3.2), so this is LLaMA-3-8B's hidden size. configs/cpu.yaml sets 256
+    # for the template backend.
+    ling_dim: int = 4096
 
     @property
     def phys_dim(self) -> int:
@@ -99,15 +109,17 @@ class GraphConfig:
     target_nodes: int = 400  # Sec. 4.1: persona graphs hold ~400 nodes
     min_nodes: int = 200  # Sec. 3.4 steady state 200-500
     max_nodes: int = 500  # Sec. 3.4 steady state 200-500
-    # Form of Eq. (7). 'paper' is the printed equation, which is additively
-    # separable and therefore yields near query-independent attention;
-    # 'query_gated' adds the multiplicative term needed for the behaviour the
-    # text describes. See DISCREPANCY D-06 in models/gat.py.
-    attention_form: str = "query_gated"
-    # How the "aggregated attention score" of Sec. 3.4 is read: 'incoming' is the
-    # literal sum of attention a node receives (degree-dominated), 'query' scores
-    # nodes by how strongly q_t attends to them. See D-07 in models/gat.py.
-    node_scoring: str = "query"
+    # Form of Eq. (7). 'paper' (default) is the printed equation, which is
+    # additively separable and therefore yields near query-independent
+    # attention; 'query_gated' adds a multiplicative query term that has no
+    # counterpart in the paper. See the module docstring of models/gat.py.
+    attention_form: str = "paper"
+    # How the "aggregated attention score" of Sec. 3.4 is read. 'incoming'
+    # (default) is the attention a node receives, which is what Eq. (13)
+    # supervises ("the normalised attention coefficient from the GAT");
+    # 'query' scores nodes by how strongly q_t attends to them, which has no
+    # counterpart in the paper. See models/gat.py.
+    node_scoring: str = "incoming"
     negative_slope: float = 0.2  # ASSUMPTION: standard GAT LeakyReLU slope
     dropout: float = 0.1  # ASSUMPTION
     # Ablation switch (Sec. 4.4 "\ GAT"): drop sub-graph retrieval entirely.
@@ -121,11 +133,12 @@ class GraphConfig:
 class LLMConfig:
     """RAG generation stage (Sec. 3.5; Table 3).
 
-    ``backend='template'`` is the default so the repository runs on CPU with no
-    model weights. ``backend='hf'`` uses the paper's LLaMA-3-8B-Instruct.
+    ``backend='hf'`` (default) is the paper's LLaMA-3-8B-Instruct, which needs a
+    CUDA GPU and gated weights. ``backend='template'`` is a weight-free stand-in
+    that runs on CPU; configs/cpu.yaml selects it.
     """
 
-    backend: str = "template"  # 'template' | 'hf'
+    backend: str = "hf"  # 'hf' | 'template'
     model_name: str = "meta-llama/Meta-Llama-3-8B-Instruct"  # Table 4
     quantisation: str = "nf4"  # Table 3 (4-bit NF4)
     lora_rank: int = 16  # r, Table 3
@@ -149,10 +162,14 @@ class LLMConfig:
     )
     # Ablation switch (Sec. 4.3 M-LLM / Sec. 4.4 "\ GAT"): generic prompt only.
     use_graph_prompt: bool = True
+    # Per-user LoRA fine-tuning on accepted utterances (Sec. 3.5). Off for the
+    # LLM-Only baseline, which Sec. 4.3 describes as "prompted with only
+    # dialogue history and a brief user profile".
+    lora_personalisation: bool = True
     # Template-backend scoring knobs (ASSUMPTION A-30, no counterpart in the
     # paper). They set how strongly retrieval outranks global statistics, and
     # therefore how often a hot decode drifts off-graph. The hallucination rate
-    # is sensitive to them -- see docs/ASSUMPTIONS.md and
+    # is sensitive to them -- see
     # scripts/sensitivity_grounding.py.
     template_global_prior: float = 0.2
     template_grounded_gain: float = 4.0
@@ -165,7 +182,14 @@ class LLMConfig:
 class SafetyConfig:
     """Bayesian uncertainty gate (Sec. 3.6, Eq. 8; Sec. 3.6 calibration note)."""
 
-    mc_passes: int = 20  # N, Table 3 (intent-scoring head only)
+    mc_passes: int = 20  # N, Table 3
+    # Where the N stochastic passes of Eq. (8) run. The paper says both:
+    # Sec. 3.6 keeps "dropout in the LLM's LoRA modules" active, while Table 6
+    # and Sec. 4.10 apply it to "the intent-scoring head only, not by re-running
+    # generation". 'scoring_head' (default) matches Table 6's latency figures;
+    # 'lora' runs Eq. (8) over the LLM's token probabilities and needs the 'hf'
+    # backend. See ERRATA.md, E-12.
+    mc_dropout_site: str = "scoring_head"  # 'scoring_head' | 'lora'
     tau_default: float = 0.15  # Sec. 3.6 "default tau = 0.15"
     tau_grid_start: float = 0.02  # Sec. 3.6 calibration grid
     tau_grid_stop: float = 0.30
@@ -177,21 +201,25 @@ class SafetyConfig:
     # Ablation switch (Sec. 4.4 "\ Bayesian Gate").
     enabled: bool = True
 
+    # Sec. 3.6: "select the smallest tau with FAR <= 0.05". FAR never falls as
+    # tau rises, so this always returns the bottom of the grid when anything is
+    # feasible (ERRATA.md, E-5). 'largest' -- the largest tau that still meets
+    # the budget -- has no counterpart in the paper.
+    tau_rule: str = "smallest"  # 'smallest' | 'largest'
+
     # --- FAR guard -------------------------------------------------------- #
-    # Sec. 3.6's printed rule gates on Var(y_hat) < tau alone. Predictive
-    # variance measures whether the MC-Dropout samples agree with EACH OTHER,
-    # not whether they are right, so a scoring head that is uniformly confident
-    # and uniformly wrong has near-zero variance and passes every tau in the
-    # grid. Calibration then cannot bound FAR at all: the budget is met at no
-    # grid point and the gate falls back to the tightest tau, which still
-    # admits everything. That is the exact failure Table 2 names as the reason
-    # to distrust a plain LLM -- "erroneous output with high confidence".
+    # Sec. 3.6's printed rule gates on Var(y_hat) < tau alone, and that is the
+    # default. Predictive variance measures whether the MC-Dropout samples
+    # agree with EACH OTHER, not whether they are right, so a scoring head that
+    # is uniformly confident and uniformly wrong has near-zero variance and
+    # passes every tau in the grid. Calibration then cannot bound FAR at all:
+    # the budget is met at no grid point and the gate falls back to the
+    # tightest tau, which still admits everything.
     #
     # 'guarded' additionally requires the predicted acceptance probability to
-    # clear a calibrated floor, which gives calibration a second axis to move
-    # along and makes the FAR budget reachable. 'variance_only' reproduces
-    # Sec. 3.6 exactly and is kept so the printed rule stays runnable.
-    decision_rule: str = "guarded"  # 'guarded' | 'variance_only'
+    # clear a calibrated floor, which makes the FAR budget reachable. It has no
+    # counterpart in the paper.
+    decision_rule: str = "variance_only"  # 'variance_only' | 'guarded'
     # Search grid for the confidence floor, used only when decision_rule is
     # 'guarded'. 0.0 is "no floor", i.e. the printed rule.
     confidence_floor: float = 0.0  # set by calibrate(); 0.0 until calibrated
@@ -270,7 +298,24 @@ class TrainingConfig:
     weight_decay: float = 0.01  # ASSUMPTION: AdamW default
     optimiser: str = "adamw"  # Sec. 4.8
     scheduler: str = "cosine"  # Sec. 4.8
-    lora_epochs: int = 3  # Sec. 4.8 "LoRA fine-tuning converges in 3 epochs"
+    lora_epochs: int = 3  # Sec. 4.8 "LoRA fine-tuning converges in 3 epochs per user"
+    # Sec. 3.6: accepted utterances "after a 24-hour on-device queue, fine-tune
+    # the LoRA adapters".
+    lora_queue_hours: float = 24.0
+    # Stage 2 of Sec. 3.7 (TFT pre-training). Sec. 4.8 gives 100 epochs for
+    # "the Perceiver IO and TFT", which is read here as 100 for each stage.
+    tft_pretrain_epochs: int = 100
+    # Stage-3 representation training: the Perceiver/TFT/GAT pass that fits the
+    # retrieval head. The paper gives 100 epochs for encoder pre-training
+    # (Sec. 4.8) and 3 for LoRA, but no figure for this stage, which is where
+    # the GAT is actually fitted.
+    #
+    # This used to borrow ``lora_epochs``, i.e. 3 -- conflating "LoRA converges
+    # in 3 epochs per user" with "the graph attention network converges in 3
+    # epochs across 20 personas". Those are unrelated quantities, and 3 epochs
+    # is almost certainly why retrieval sat at chance. ASSUMPTION: adopt the
+    # paper's only stated representation-training figure, 100, and expose it.
+    representation_epochs: int = 100
     grad_clip: float = 1.0  # ASSUMPTION
     device: str = "auto"  # 'auto' | 'cpu' | 'cuda' | 'mps'
     num_workers: int = 0
@@ -295,7 +340,7 @@ class SimulationConfig:
     fatigue_peak: float = 0.8  # midpoint-ish of the 0.5-0.9 grid
     fatigue_noise: float = 0.02  # ASSUMPTION
     # Simulated-user behaviour used to score SACT/FAR without human raters.
-    user_accept_threshold: float = 0.55  # ASSUMPTION: see docs/ASSUMPTIONS.md
+    user_accept_threshold: float = 0.55  # ASSUMPTION: not specified by the paper
     reduced_sensor_set: bool = False  # Sec. 4.6 / 5.6: EDA + PPG + monocular gaze
 
 

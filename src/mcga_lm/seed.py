@@ -1,4 +1,8 @@
+"""Deterministic seeding across Python, NumPy and PyTorch.
 
+Sec. 3.8 replicates each condition five times with different random seeds (LLM
+sampling, MC Dropout) and reports mean +/- SD across runs.
+"""
 
 from __future__ import annotations
 

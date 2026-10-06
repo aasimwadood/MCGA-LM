@@ -15,7 +15,11 @@ from mcga_lm.config import Config  # noqa: E402
 
 
 def _small(cfg: Config) -> Config:
-    """Tiny but structurally identical configuration, for fast tests."""
+    """Tiny but structurally identical configuration, for fast tests.
+
+    Uses the template backend: the default is LLaMA-3-8B, which tests cannot load.
+    """
+    cfg.llm.backend = "template"
     cfg.perceiver.num_latents = 8
     cfg.perceiver.latent_dim = 32
     cfg.perceiver.depth = 1

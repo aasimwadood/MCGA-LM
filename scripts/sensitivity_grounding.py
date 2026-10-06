@@ -1,5 +1,15 @@
 #!/usr/bin/env python3
+"""How grounded the template backend is, and what it costs (assumption surface).
 
+    python scripts/sensitivity_grounding.py
+
+The template backend's tendency to leave the graph is governed by a free
+parameter with no counterpart in the paper, and the hallucination rate is
+sensitive to it. This prints the whole surface -- hallucination rate against
+decoding temperature and against the retrieval-vs-global score ratio -- rather
+than one tuned point, so any hallucination number from this repository can be
+read in context.
+"""
 
 from __future__ import annotations
 

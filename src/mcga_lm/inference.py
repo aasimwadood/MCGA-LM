@@ -1,10 +1,40 @@
+"""Algorithm 1 -- MCGA-LM inference for one communicative turn (paper p. 14).
 
+The control flow, the counters and the caps are transcribed line by line:
+
+     8:  a <- 0; c <- 0                     SACT counter; clarification counter
+     9:  constants C_max = 2, J_max = 3
+    10:  while Var(y_hat) >= tau and c < C_max do
+    11:      Clarification Mode: present top-3 intent nodes from G_active,t
+    12:      wait for binary switch selection; a <- a+1; c <- c+1
+    13:      refine G_active,t; re-run steps 5-7
+    15:  if c = C_max then proceed with the best candidate regardless of Var
+    16:  for j = 1 to J_max do
+    17:      present candidate y_hat_j for accept/dismiss; a <- a+1
+    18-20:  if the user accepts: update G and return (y_hat_j, a)
+    23:  return ABSTAIN and surface the manual grid fallback
+    24:  Note: a <= C_max + J_max = 5 holds by construction.
+
+The bound on line 24 is architectural, and every exit path from ``run_turn``
+asserts it.
+
+Line 7 runs Eq. (8) wherever ``SafetyConfig.mc_dropout_site`` says: the
+intent-scoring head (default, Table 6) or the LLM's LoRA modules (Sec. 3.6); see
+ERRATA.md, E-12. Accepted utterances update the graph and, when a
+:class:`~mcga_lm.training.lora.LoRAUpdateQueue` is attached, wait in the 24-hour
+queue before fine-tuning the user's LoRA adapter (Sec. 3.6).
+
+One addition has no counterpart in Algorithm 1: a retrieval floor that routes a
+turn to Clarification Mode when the active sub-graph holds no more attention
+mass than chance. It is disabled by default -- see
+``InferenceConfig.min_retrieval_mass_ratio``.
+"""
 
 from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Sequence, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
 import torch
@@ -24,6 +54,9 @@ from .memory.linearise import linearise_subgraph
 from .states import fatigue_level
 from .pipeline import MCGALM
 from .safety.gate import BayesianGate, clarification_bubbles, retrieval_mass_ok
+
+if TYPE_CHECKING:  # training imports this module, so only for annotations
+    from .training.lora import LoRAUpdateQueue
 
 # Depth of the ranked candidate list retained for IHR@K measurement
 # (Sec. 4.2 reports K = 1, 3, 5). Presentation is still capped at J_max.
@@ -69,13 +102,24 @@ class AdaptiveCommunicator:
         cfg: Config,
         gate: Optional[BayesianGate] = None,
         device: Optional[torch.device] = None,
+        lora_queue: Optional[LoRAUpdateQueue] = None,
     ) -> None:
         check_embedding_dim(backend, cfg.inputs.ling_dim)
+        site = cfg.safety.mc_dropout_site
+        if site not in ("scoring_head", "lora"):
+            raise ValueError(f"unknown mc_dropout_site {site!r}; expected 'scoring_head' or 'lora'")
+        if site == "lora" and not getattr(backend, "supports_lora", False):
+            raise ValueError(
+                "mc_dropout_site='lora' runs Eq. (8) through the LLM's LoRA modules, so it needs "
+                "the 'hf' backend; the template backend has no weights"
+            )
         self.model = model
         self.backend = backend
         self.cfg = cfg
         self.gate = gate or BayesianGate(cfg.safety)
         self.device = device or torch.device("cpu")
+        # Sec. 3.6: accepted utterances wait 24 hours, then fine-tune LoRA.
+        self.lora_queue = lora_queue
 
     # ------------------------------------------------------------------ #
     @torch.no_grad()
@@ -89,6 +133,7 @@ class AdaptiveCommunicator:
         node_features: Optional[torch.Tensor],  # (1, |V|, K*D_h)
         rng: np.random.Generator,
         update_graph: bool = True,
+        now_h: float = 0.0,  # simulation clock for the LoRA update queue
     ) -> TurnResult:
         timings: Dict[str, float] = {}
         level = fatigue_level(turn.context.fatigue)
@@ -102,7 +147,7 @@ class AdaptiveCommunicator:
         c = 0  # line 8: clarification-round counter
         c_max, j_max = self.cfg.inference.c_max, self.cfg.inference.j_max  # line 9
 
-        candidates, variance, confidence = self._propose(
+        candidates, variance, confidence, prompt_text = self._propose(
             persona, graph, turn, query_row, node_features, active_ids, active_names, level, rng, timings
         )
 
@@ -125,7 +170,7 @@ class AdaptiveCommunicator:
             # The user has just named a node, so the sub-graph is now grounded in
             # an explicit choice rather than in attention alone.
             retrieval_ok = True
-            candidates, variance, confidence = self._propose(
+            candidates, variance, confidence, prompt_text = self._propose(
                 persona, graph, turn, query_row, node_features, active_ids, active_names, level, rng, timings
             )
         if c == c_max and not self.gate.decide(variance, confidence).accept:
@@ -158,6 +203,8 @@ class AdaptiveCommunicator:
             if accepted:  # lines 18-20
                 if update_graph:
                     self._commit(graph, turn, candidate)
+                if self.lora_queue is not None:
+                    self.lora_queue.add(prompt_text, candidate.text, now_h)
                 assert a <= c_max + j_max, "Algorithm 1 line 24 violated"
                 return TurnResult(
                     utterance=candidate.text,
@@ -243,8 +290,11 @@ class AdaptiveCommunicator:
         level: str,
         rng: np.random.Generator,
         timings: Dict[str, float],
-    ) -> Tuple[List[GeneratedUtterance], float, float]:
-        """Lines 5-7: assemble the prompt, decode once, score with MC Dropout."""
+    ) -> Tuple[List[GeneratedUtterance], float, float, str]:
+        """Lines 5-7: assemble the prompt, decode once, score with MC Dropout.
+
+        Returns ``(candidates, Var(y_hat), confidence, rendered prompt)``.
+        """
         t0 = time.perf_counter()
         graph_text = linearise_subgraph(graph, active_ids) if active_ids else ""
         scores = self._active_scores(graph, active_ids)
@@ -271,21 +321,30 @@ class AdaptiveCommunicator:
             rng=rng,
         )
         timings["generate_ms"] = timings.get("generate_ms", 0.0) + (time.perf_counter() - t0) * 1e3
+        prompt_text = prompt.render()
         if not candidates:
-            return [], float("inf"), 0.0
+            return [], float("inf"), 0.0, prompt_text
         candidates = sorted(candidates, key=lambda x: -x.score)
 
         # Line 7: N MC-Dropout passes re-score the already-decoded sequence.
         t0 = time.perf_counter()
-        context = self.model.scoring_context(
-            query_row, self._subgraph_features(node_features, active_ids)
-        )
-        tokens = torch.from_numpy(
-            self.backend.embed_tokens(candidates[0].text, self.cfg.llm.max_new_tokens)
-        ).unsqueeze(0).to(query_row.device)
-        estimate = self.model.uncertainty(context, tokens)
+        if self.cfg.safety.mc_dropout_site == "lora":
+            # Sec. 3.6 / Eq. (8): dropout in the LLM's LoRA modules.
+            variance, confidence = self.backend.mc_dropout(
+                prompt_text, candidates[0].text, self.cfg.safety.mc_passes
+            )
+        else:
+            # Table 6 / Sec. 4.10: the intent-scoring head only.
+            context = self.model.scoring_context(
+                query_row, self._subgraph_features(node_features, active_ids)
+            )
+            tokens = torch.from_numpy(
+                self.backend.embed_tokens(candidates[0].text, self.cfg.llm.max_new_tokens)
+            ).unsqueeze(0).to(query_row.device)
+            estimate = self.model.uncertainty(context, tokens)
+            variance, confidence = float(estimate.variance[0]), float(estimate.confidence[0])
         timings["mc_dropout_ms"] = timings.get("mc_dropout_ms", 0.0) + (time.perf_counter() - t0) * 1e3
-        return candidates, float(estimate.variance[0]), float(estimate.confidence[0])
+        return candidates, variance, confidence, prompt_text
 
     # ------------------------------------------------------------------ #
     def _active_nodes(

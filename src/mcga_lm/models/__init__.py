@@ -1,3 +1,5 @@
+"""Model components: Perceiver IO, TFT, GAT, intent head, attention layers.
+"""
 
 from .gat import ActiveSubgraph, GraphAttentionIntentMemory, graph_tensors, segment_softmax
 from .intent_head import IntentScoringHead, PhysiologyDecoder, UncertaintyEstimate

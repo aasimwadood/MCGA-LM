@@ -1,4 +1,15 @@
+"""Hallucination taxonomy and detection (paper Sec. 4.2, Sec. 5.2).
 
+Sec. 4.2 distinguishes **hard** hallucinations -- an entity, relation or fact
+directly contradicting the graph, e.g. naming the wrong caregiver -- from **soft**
+ones, absent from the graph and history but not contradicted. Both are assigned
+automatically by entity linking against G and the dialogue history; no human
+annotation is involved.
+
+Sec. 5.2 states the limitation plainly: the same graph serves as both generation
+context and evaluation reference, so the procedure is circular by construction
+and cannot detect utterances that are graph-consistent yet pragmatically wrong.
+"""
 
 from __future__ import annotations
 

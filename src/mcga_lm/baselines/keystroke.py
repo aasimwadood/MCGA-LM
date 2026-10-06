@@ -1,4 +1,14 @@
+"""Keystroke-level baselines (paper Sec. 4.3, items 1, 5, 6).
 
+  1. Commercial AAC -- a 16-cell grid with row-column scanning, simulated with a
+     keystroke-level model and validated against the published 10.5 +/- 2.1 WPM.
+  5. Static word prediction (bigram).
+  6. Adaptive grid with frequency/recency ranking.
+
+For these, KSPC counts *keystrokes* (chosen cells), not switch activations:
+row-column scanning spends two activations per keystroke, and conflating the two
+would push every system above 1.0.
+"""
 
 from __future__ import annotations
 

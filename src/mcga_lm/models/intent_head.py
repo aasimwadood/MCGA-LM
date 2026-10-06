@@ -1,4 +1,15 @@
+"""Intent-scoring head and physiology decoder.
 
+The scoring head supplies the Bayesian uncertainty estimate of Sec. 3.6, Eq. (8):
+N = 20 MC-Dropout passes over the head alone -- not a re-run of generation, which
+is what keeps uncertainty at ~12% of the latency budget rather than a 20x
+multiplier (Table 6, Sec. 4.10). That is the default site; Sec. 3.6 instead puts
+the dropout in the LLM's LoRA modules, available as
+``SafetyConfig.mc_dropout_site = "lora"`` (ERRATA.md, E-12).
+
+The decoder is the 3-layer, 256-unit MLP of Eq. (12), reconstructing x_phys from
+the latent array so the bottleneck retains fine-grained state information.
+"""
 
 from __future__ import annotations
 

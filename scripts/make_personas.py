@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
+"""Build the synthetic persona suite (paper Sec. 4.1).
 
+    python scripts/make_personas.py --out runs/ --save-graphs
+
+20 personas -- 10 ALS, 6 cerebral palsy, 4 brainstem stroke -- each with a
+personal intent graph of roughly 400 nodes, and a summary of graph sizes and
+on-device storage against the bounds of Sec. 3.4 and Sec. 4.10.
+"""
 
 from __future__ import annotations
 

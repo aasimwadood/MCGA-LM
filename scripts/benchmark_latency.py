@@ -1,5 +1,16 @@
 #!/usr/bin/env python3
+"""Per-turn response-latency breakdown (paper Sec. 4.9, Table 6, Fig. 3).
 
+    python scripts/benchmark_latency.py --out runs/ --turns 100
+
+Response latency is the switch-press-to-display interval and is the only latency
+metric this repository reports, matching Table 6. The 2000 ms physiological
+sliding window is a continuously maintained buffer and is excluded.
+
+Also prints the analytic cost model of Sec. 4.9 beside the measurement. The
+paper's 457 +/- 74 ms is from an NVIDIA Jetson AGX Orin with a 4-bit LLaMA-3-8B;
+numbers produced here are for this hardware and this backend.
+"""
 
 from __future__ import annotations
 
@@ -47,7 +58,7 @@ def main() -> None:
     backend = build_backend(cfg)
     persona = personas[0]
     model = MCGALM(cfg).to(device).eval()
-    encoder = TurnEncoder(cfg.inputs)
+    encoder = TurnEncoder(cfg.inputs, backend=backend)
 
     banner("Per-turn response-latency benchmark (paper Table 6)")
     print(f"device={device}  platform={platform.platform()}  backend={cfg.llm.backend}")

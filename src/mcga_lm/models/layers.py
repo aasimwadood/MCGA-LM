@@ -1,3 +1,8 @@
+"""Attention blocks used by the Perceiver IO encoder (paper Eqs. 3-4).
+
+    Eq. (3)  Z^(l+1) = CrossAttn(Q = Z^(l), K, V = X_t)
+    Eq. (4)  Z^(l+2) = SelfAttn(Z^(l+1)) + FFN(Z^(l+1))
+"""
 
 from __future__ import annotations
 

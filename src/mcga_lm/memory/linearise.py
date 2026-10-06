@@ -1,3 +1,9 @@
+"""Sub-graph linearisation for the RAG prompt (paper Sec. 3.5).
+
+Turns the Active Intent Sub-graph into the textual summary T_graph that the
+structured prompt carries, in the form Sec. 3.5 illustrates: "User is connected
+to 'pain' [0.91]; pain is associated with 'medication' [0.85]".
+"""
 
 from __future__ import annotations
 

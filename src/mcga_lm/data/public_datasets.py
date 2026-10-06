@@ -1,4 +1,20 @@
+"""Loaders for the three public pre-training corpora (paper Sec. 4.1, Table 4).
 
+    MAMEM   36 participants; EEG, GSR, heart rate, eye gaze   10.5281/zenodo.834154
+    CLAS    62 participants; ECG, PPG, EDA, accelerometry     10.1109/BIA48344.2019.8967457
+    WESAD   15 subjects; ECG, EDA, EMG, respiration, accel.   10.1145/3267305.3267350
+
+NOT BUNDLED. None of these are redistributed here; download them from the DOIs
+above into ``data/raw/<name>/``. Each loader raises a clear error if the
+directory is missing, and ``synthetic_pretraining_corpus`` provides a
+clearly-labelled substitute so pre-training runs offline.
+
+STATUS: the three real loaders are UNVERIFIED -- they encode the published file
+layouts but have never been run against the actual archives.
+
+The participant counts and channels above differ from Sec. 4.1's description of
+the same datasets; see ERRATA.md.
+"""
 
 from __future__ import annotations
 
@@ -30,6 +46,9 @@ class PhysiologyRecord:
     load_label: str
     subject: str
     source: str
+    # The subsequent utterance, for the stage-1 contrastive term (Sec. 3.7).
+    # Empty for MAMEM/CLAS/WESAD, which carry no language.
+    transcript: str = ""
 
 
 def _require(path: Path, name: str) -> Path:

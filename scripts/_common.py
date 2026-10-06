@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import sys
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 # Allow running the scripts straight from a clone without installing.
 ROOT = Path(__file__).resolve().parents[1]
@@ -66,6 +66,15 @@ def build_backend(cfg: Config):
     return _build(cfg.llm, device="cpu", embedding_dim=cfg.inputs.ling_dim)
 
 
+def instruction_tune_from_args(backend, cfg: Config, path: Optional[str]) -> dict:
+    """Sec. 3.7 stage 3: instruction-tune the shared LoRA adapter, once, before
+    any per-user adapter is copied from it."""
+    from mcga_lm.training.lora import instruction_tune, load_instruction_pairs
+
+    pairs = load_instruction_pairs(path) if path else None
+    return instruction_tune(backend, pairs, epochs=cfg.training.lora_epochs, lr=cfg.training.lr)
+
+
 def corpus_sentences(cfg: Config, personas) -> List[str]:
     """Training-split sentences of the synthetic AAC-Intent-Corpus (Sec. 4.1)."""
     from mcga_lm.data.corpus import build_corpus
@@ -87,7 +96,7 @@ def banner(title: str) -> None:
 def provenance_note() -> str:
     return (
         "Produced by the MCGA-LM reference implementation on synthetic personas. "
-        "Unless a model backend and pre-training corpora were configured, these "
-        "numbers come from the weight-free template backend and are not the "
-        "paper's reported figures. See docs/STATUS.md."
+        "These are not the paper's reported figures. Runs on the template backend "
+        "(configs/cpu.yaml, configs/quick.yaml) use no language model at all; see the "
+        "Reproduction status section of README.md for what differs and why."
     )

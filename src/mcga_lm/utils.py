@@ -1,3 +1,8 @@
+"""Small shared helpers: logging, JSON output, device resolution, summaries.
+
+``median_iqr`` exists because Table 7 reports SACT as a mean with a median and
+interquartile range alongside it.
+"""
 
 from __future__ import annotations
 

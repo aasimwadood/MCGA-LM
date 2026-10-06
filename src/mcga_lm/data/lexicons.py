@@ -1,4 +1,8 @@
+"""Word pools used to generate persona graphs and utterances.
 
+Stands in for the SLP-annotated content of Sec. 4.1. Entirely invented; no real
+user language.
+"""
 
 from __future__ import annotations
 

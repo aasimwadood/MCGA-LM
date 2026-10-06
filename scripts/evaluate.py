@@ -1,5 +1,21 @@
 #!/usr/bin/env python3
+"""The main experiment: Tables 7-8 and Fig. 2 (paper Sec. 4.2, 4.3, 5.1).
 
+    python scripts/evaluate.py --out runs/ --pretrained runs/pretrain/encoder_pretrained.pt
+
+Runs MCGA-LM against every baseline of Sec. 4.3 over the persona suite, on the
+in-distribution and held-out splits, and reports results descriptively with
+Cohen's d_s on SACT, as the revised Sec. 4.8 does. ``--inferential`` adds the
+original Sec. 4.7 plan (ANOVA, p-values, bootstrap intervals), which the revised
+paper withdraws (ERRATA.md, E-1).
+
+``--instruction-data`` runs Sec. 3.7's instruction-tuning step before any system
+is trained; each system then fine-tunes per-persona LoRA adapters (LLaMA only).
+
+``--quick`` is a WIRING CHECK, NOT A RESULT: it shrinks the encoder eightfold and
+trains the retrieval head for one epoch, which drives IHR, SACT, WPM and FAR to
+chance. Its output goes to runs/evaluate/quick/ and is stamped accordingly.
+"""
 
 from __future__ import annotations
 
@@ -13,6 +29,7 @@ from _common import (
     build_backend,
     build_personas,
     corpus_sentences,
+    instruction_tune_from_args,
     load_config,
     logger,
     out_dir,
@@ -32,9 +49,20 @@ def main() -> None:
     parser.add_argument(
         "--per-persona",
         action="store_true",
-        help="fit one model per persona (Sec. 3.7's on-device configuration). Slower, but it is "
-        "what the paper describes, and the shared-model path under-fits retrieval badly "
-        "(docs/RESULTS.md section 4)",
+        help="fit a separate encoder/GAT per persona (not in the paper; tau and LoRA adapters are "
+        "per persona either way). Slower, but the shared-model path under-fits retrieval badly "
+        "(see the Reproduction status section of README.md)",
+    )
+    parser.add_argument(
+        "--inferential",
+        action="store_true",
+        help="also run the original Sec. 4.7 tests (withdrawn from the revised paper; ERRATA E-1)",
+    )
+    parser.add_argument(
+        "--instruction-data",
+        type=str,
+        default=None,
+        help="JSON-lines {prompt, response} file for Sec. 3.7's instruction-tuning step",
     )
     parser.add_argument("--systems", nargs="*", default=None)
     parser.add_argument("--skip-heldout", action="store_true")
@@ -56,12 +84,15 @@ def main() -> None:
     personas = build_personas(cfg)
     backend = build_backend(cfg)
     seeds = list(cfg.simulation.seeds)
-    target = out_dir(cfg, "evaluate")
+    # Quick runs write somewhere else entirely, so a smoke test can never
+    # overwrite -- or be mistaken for -- the canonical results.
+    target = out_dir(cfg, "evaluate/quick" if args.quick else "evaluate")
     systems = args.systems or GENERATIVE
 
     banner("Evaluating systems on the synthetic persona suite (paper Sec. 5.1)")
     print(f"personas={len(personas)} seeds={seeds} device={device} backend={cfg.llm.backend}")
-    print("model fitting: " + ("one per persona (Sec. 3.7)" if args.per_persona else "one shared across personas"))
+    print("model fitting: " + ("one per persona" if args.per_persona else "one shared across personas"))
+    instruction = instruction_tune_from_args(backend, cfg, args.instruction_data)
     print(f"Latin-square counterbalancing order (Sec. 3.8): {R.latin_square(len(systems))[0]} ...")
 
     results: Dict[str, R.SystemResult] = {}
@@ -103,16 +134,19 @@ def main() -> None:
     _train_classifier(classifier, cfg, personas, device, epochs=max(1, args.head_epochs))
     results["Non-LLM-Intent"] = R.run_intent_classifier(cfg, classifier, personas, seeds, device)
 
-    banner("Statistics (paper Sec. 4.7)")
-    stats = _statistics(results, cfg, S)
+    banner("Effect sizes (revised Sec. 4.8)" + (" and the original Sec. 4.7 tests" if args.inferential else ""))
+    stats = _statistics(results, cfg, S, inferential=args.inferential)
 
     payload = {
         "config": cfg.to_dict(),
+        "quick": bool(args.quick),
+        "smoke_test_not_a_result": bool(args.quick),
         "per_persona": args.per_persona,
         "provenance": provenance_note(),
         "results": {k: {"aggregate": v.aggregate, "per_persona": v.per_persona} for k, v in results.items()},
         "held_out": {k: {"aggregate": v.aggregate} for k, v in heldout.items()},
         "statistics": stats,
+        "instruction_tuning": instruction,
         # Sec. 3.6 safety: personas whose FAR the gate could not bound at all.
         "calibration": {
             "summary": report.summary(),
@@ -123,6 +157,13 @@ def main() -> None:
     }
     save_json(payload, target / "results.json")
     table = _markdown_tables(results, heldout, stats, report)
+    if args.quick:
+        table = (
+            "> ⚠️ **SMOKE TEST, NOT A RESULT.** Reduced encoder, one training epoch,\n"
+            "> 2 seeds, 20 turns per session. Retrieval-dependent metrics (IHR, SACT,\n"
+            "> WPM, FAR) collapse towards chance by construction. Do not cite, compare\n"
+            "> against the paper, or commit these numbers.\n\n"
+        ) + table
     (target / "results.md").write_text(table, encoding="utf-8")
     print(table)
     print(f"\nwritten to {target}")
@@ -130,7 +171,14 @@ def main() -> None:
 
 # --------------------------------------------------------------------------- #
 def _quick(cfg):
-    """Smoke-test configuration: same code path, much smaller everything."""
+    """Smoke-test configuration: same code path, much smaller everything.
+
+    This is a wiring check, NOT a result. It shrinks the encoder ~8x and trains
+    the retrieval head for a single epoch, so every retrieval-dependent metric
+    (IHR, SACT, WPM, FAR) collapses towards chance. Output is written to a
+    ``quick/`` subdirectory and stamped ``"quick": true`` so it can never be
+    mistaken for, or committed as, a measurement.
+    """
     cfg.perceiver.num_latents = 32
     cfg.perceiver.latent_dim = 128
     cfg.perceiver.depth = 1
@@ -141,8 +189,12 @@ def _quick(cfg):
     cfg.graph.gat_hidden = 32
     cfg.simulation.turns_per_session = 20
     cfg.simulation.seeds = [0, 1]
-    cfg.training.lora_epochs = 1
+    cfg.training.representation_epochs = 1
     cfg.safety.mc_passes = 8
+    # A wiring check has to run anywhere, so it uses the CPU backend.
+    cfg.llm.backend = "template"
+    cfg.inputs.ling_dim = 256
+    cfg.safety.mc_dropout_site = "scoring_head"
     return cfg
 
 
@@ -172,30 +224,56 @@ def _train_classifier(classifier, cfg, personas, device, epochs: int) -> None:
                 optimiser.step()
 
 
-def _statistics(results, cfg, S) -> Dict:
-    """RM-ANOVA on SACT plus Cohen's d_s and Holm-Bonferroni (Sec. 4.7, 5.1)."""
+def _statistics(results, cfg, S, inferential: bool = False) -> Dict:
+    """Effect sizes on SACT as the revised paper reports them (Sec. 4.8, 5.1).
+
+    Cohen's d_s of each system against MCGA-LM, from the per-condition means and
+    SDs -- the pooled-SD form that can be recomputed from Table 7 -- signed so a
+    positive value favours MCGA-LM. No inferential tests: the revision withdraws
+    them (ERRATA.md, E-1).
+
+    ``inferential=True`` adds the original Sec. 4.7 plan (RM-ANOVA, Holm-corrected
+    paired tests, bootstrap intervals, ART + Wilcoxon), which these runs can
+    compute because they have per-persona data. It has no counterpart in the
+    revised paper.
+    """
     names = [n for n in results if np.isfinite(results[n].column("sact")).all()]
     if "MCGA-LM" not in names or len(names) < 2:
-        return {"note": "insufficient systems with SACT for the ANOVA"}
+        return {"note": "insufficient systems with SACT for effect sizes"}
     matrix = np.stack([results[n].column("sact") for n in names], axis=1)
-    anova = S.repeated_measures_anova(matrix)
     ref = names.index("MCGA-LM")
+    effect_sizes = []
+    for j, name in enumerate(names):
+        if j == ref:
+            continue
+        d_s = S.cohens_ds(matrix[:, j], matrix[:, ref])
+        effect_sizes.append(
+            {"comparison": f"MCGA-LM vs {name}", "d_s": d_s, "large_effect": bool(abs(d_s) > 0.8)}
+        )
+    out: Dict = {"sact_systems": names, "sact_effect_sizes_vs_MCGA-LM": effect_sizes}
+    if inferential:
+        out["inferential"] = _inferential(results, names, matrix, ref, cfg, S)
+    return out
+
+
+def _inferential(results, names, matrix, ref, cfg, S) -> Dict:
+    """The original Sec. 4.7 plan, withdrawn from the revised paper (E-1)."""
+    anova = S.repeated_measures_anova(matrix)
     pairwise = S.paired_t_tests(matrix, names, reference=ref)
     holm = S.holm_bonferroni([c["p"] for c in pairwise], alpha=cfg.evaluation.holm_alpha)
     for c, p_adj, rej in zip(pairwise, holm["p_adjusted"], holm["reject"]):
         c["p_holm"] = p_adj
         c["significant"] = bool(rej)
         c["stars"] = S.stars(p_adj)
-    # Sec. 5.1 reports every effect size with a 95% bootstrap percentile CI
-    # (10,000 resamples), resampling personas so the pairing is preserved.
+    # Personas are resampled so the repeated-measures pairing is preserved.
     for j, c in zip([i for i in range(len(names)) if i != ref], pairwise):
+        # Baseline first, so a positive d_s favours MCGA-LM as in the main table.
         ci = S.bootstrap_effect_size(
-            matrix[:, ref], matrix[:, j], n_iter=cfg.evaluation.bootstrap_iters, seed=cfg.seed
+            matrix[:, j], matrix[:, ref], n_iter=cfg.evaluation.bootstrap_iters, seed=cfg.seed
         )
         c["d_s_ci_low"] = ci["ci_low"]
         c["d_s_ci_high"] = ci["ci_high"]
         c["d_s_formatted"] = S.format_effect_size(ci)
-        c["large_effect"] = bool(abs(ci["d_s"]) > 0.8)  # Sec. 5.1: "all large effects (d > 0.8)"
 
     nonparam: Dict[str, list] = {}
     for metric in ("hallucination_hard", "ihr@3"):
@@ -214,7 +292,6 @@ def _statistics(results, cfg, S) -> Dict:
 
     return {
         "sact_anova": anova.as_dict(),
-        "sact_systems": names,
         "sact_pairwise_vs_MCGA-LM": pairwise,
         "nonparametric": nonparam,
         "post_hoc_power_f0.40": S.post_hoc_power(0.40, matrix.shape[0], matrix.shape[1]),
@@ -271,23 +348,34 @@ def _markdown_tables(results, heldout, stats, report=None) -> str:
                 f"| {name} | {_fmt(a,'hallucination_hard',100,1)} | {_fmt(a,'hallucination_soft',100,1)} | "
                 f"{_fmt(a,'ihr@3',100,0)} |"
             )
-    if "sact_anova" in stats:
-        a = stats["sact_anova"]
-        lines.append("\n## Statistics (paper Sec. 4.7)\n")
+    if "sact_effect_sizes_vs_MCGA-LM" in stats:
+        lines.append("\n## Effect sizes on SACT (revised Sec. 4.8)\n")
+        lines.append("| Contrast | Cohen's d_s (positive favours MCGA-LM) |")
+        lines.append("|---|---|")
+        for c in stats["sact_effect_sizes_vs_MCGA-LM"]:
+            lines.append(f"| {c['comparison']} | {c['d_s']:.2f} |")
+        lines.append("\nd_s uses the pooled within-condition SD, so it can be recomputed from the table above.")
+    if "inferential" in stats:
+        inf = stats["inferential"]
+        a = inf["sact_anova"]
+        lines.append("\n## Inferential statistics (original Sec. 4.7 plan, `--inferential`)\n")
+        lines.append(
+            "> The revised paper reports no inferential tests. The ANOVA, p-values and "
+            "intervals below have no counterpart in it (ERRATA.md, E-1).\n"
+        )
         lines.append(
             f"Repeated-measures ANOVA on SACT: F({a['df1']:.1f}, {a['df2']:.1f}) = {a['F']:.2f}, "
             f"p = {a['p']:.2e}, partial eta^2 = {a['partial_eta_sq']:.3f}"
             + (" (Greenhouse-Geisser corrected)" if a["gg_corrected"] else "")
         )
-        lines.append("\n| Contrast | Cohen's d_s [95% bootstrap CI] | p (Holm) | |")
+        lines.append("\n| Contrast | Cohen's d_s [95% bootstrap CI], positive favours MCGA-LM | p (Holm) | |")
         lines.append("|---|---|---|---|")
-        for c in stats["sact_pairwise_vs_MCGA-LM"]:
+        for c in inf["sact_pairwise_vs_MCGA-LM"]:
             d = c.get("d_s_formatted", f"{c['d_s']:.2f}")
             lines.append(f"| {c['comparison']} | {d} | {c['p_holm']:.2e} | {c['stars']} |")
         lines.append(
             "\nIntervals are 95% bootstrap percentile intervals over personas "
-            "(Sec. 5.1; 10,000 resamples), resampled pairwise so the "
-            "repeated-measures pairing is preserved."
+            "(10,000 resamples), resampled pairwise so the repeated-measures pairing is preserved."
         )
     if report is not None:
         missed = sorted(getattr(report, "far_budget_missed", ()) or ())
@@ -295,7 +383,7 @@ def _markdown_tables(results, heldout, stats, report=None) -> str:
         if missed:
             lines.append(
                 f"⚠️ **The FAR budget was unreachable for {len(missed)} persona(s):** "
-                f"{', '.join(missed)}. For these users no (τ, floor) setting kept false "
+                f"{', '.join(missed)}. For these users no gate setting kept false "
                 f"acceptance within {getattr(report, 'far_budget', 0.05):.0%}, so the FAR "
                 f"reported above is **not bounded by the gate**. This is the signature of a "
                 f"scoring head that is confidently wrong rather than uncertain, which no "

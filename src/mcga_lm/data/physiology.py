@@ -1,3 +1,15 @@
+"""Synthetic physiological streams and the fatigue model (paper Sec. 4.5, 5.5).
+
+Sec. 4.5 simulates 60-minute conversations with fatigue modelled as an
+exponential rise in cognitive load, based on published HRV/EDA decay curves.
+Sec. 5.5 varies the half-life over 15-60 min and the peak factor over 0.5-0.9.
+
+SYNTHETIC DATA. Everything here is generated, not recorded. The couplings between
+fatigue and each channel follow the directions reported in the wearable
+mental-fatigue literature the paper cites (HRV time-domain indices fall, tonic
+EDA rises, frontal theta rises, blink rate rises, pupil diameter falls), but the
+magnitudes are this repository's choice.
+"""
 
 from __future__ import annotations
 

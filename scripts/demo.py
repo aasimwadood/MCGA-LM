@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
+"""Watch a single communicative turn happen (paper Algorithm 1).
 
+    python scripts/demo.py --checkpoint runs/train/MCGA-LM/mcga_lm.pt --turns 5 --show-prompt
+
+Prints the fatigue state, the retrieved sub-graph, the assembled prompt, the
+candidates, the gate's decision and the switch activations spent -- the quickest
+way to see whether the pipeline is behaving before running a full evaluation.
+"""
 
 from __future__ import annotations
 
@@ -38,7 +45,7 @@ def main() -> None:
     if args.checkpoint:
         state = torch.load(args.checkpoint, map_location=device, weights_only=False)
         if state.get("per_persona"):
-            # One model per persona (Sec. 3.7); pick this persona's own.
+            # Checkpoint from --per-persona training; pick this persona's own.
             weights = state["models"].get(persona.spec.persona_id)
             if weights is None:
                 raise SystemExit(
@@ -56,7 +63,7 @@ def main() -> None:
     banner(f"MCGA-LM demo -- persona {persona.spec.persona_id} ({persona.spec.diagnosis})")
     turns = persona.simulate_session(seed=0, n_turns=args.turns)
     working = IntentMemoryGraph.from_dict(persona.graph.to_dict())
-    encoder = TurnEncoder(cfg.inputs, reduced_sensor_set=cfg.simulation.reduced_sensor_set)
+    encoder = TurnEncoder(cfg.inputs, reduced_sensor_set=cfg.simulation.reduced_sensor_set, backend=backend)
     session = encoder.encode_session(persona, turns, working, seed=0).to(device)
 
     with torch.no_grad():

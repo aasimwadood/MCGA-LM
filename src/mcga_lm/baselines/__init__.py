@@ -1,3 +1,5 @@
+"""Baselines and ablations (paper Sec. 4.3, 4.4).
+"""
 
 from __future__ import annotations
 

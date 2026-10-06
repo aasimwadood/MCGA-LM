@@ -1,3 +1,4 @@
+# Sec. 4.3 baseline M-LLM. Otherwise configs/default.yaml.
 
 name: baseline-M-LLM
 seed: 1234
@@ -7,13 +8,14 @@ inputs:
   eda_features: 2
   phys_window: 128
   phys_rate_hz: 64
+  phys_tokens: 8
   beh_features: 4
   beh_window: 8
   env_location_classes: 6
   env_partner_classes: 8
   env_scalars: 3
   ling_tokens: 10
-  ling_dim: 256
+  ling_dim: 4096
 perceiver:
   num_latents: 256
   latent_dim: 512
@@ -41,11 +43,13 @@ graph:
   target_nodes: 400
   min_nodes: 200
   max_nodes: 500
+  attention_form: paper
+  node_scoring: incoming
   negative_slope: 0.2
   dropout: 0.1
   enabled: false
 llm:
-  backend: template
+  backend: hf
   model_name: meta-llama/Meta-Llama-3-8B-Instruct
   quantisation: nf4
   lora_rank: 16
@@ -71,10 +75,12 @@ llm:
     moderate: 2
     high: 1
   use_graph_prompt: false
+  lora_personalisation: true
   template_global_prior: 0.2
   template_grounded_gain: 4.0
 safety:
   mc_passes: 20
+  mc_dropout_site: scoring_head
   tau_default: 0.15
   tau_grid_start: 0.02
   tau_grid_stop: 0.3
@@ -84,9 +90,16 @@ safety:
   calibration_samples: 50
   dropout_p: 0.1
   enabled: true
+  tau_rule: smallest
+  decision_rule: variance_only
+  confidence_floor: 0.0
+  floor_grid_stop: 0.9
+  floor_grid_step: 0.1
+  strict_far_budget: false
 inference:
   c_max: 2
   j_max: 3
+  min_retrieval_mass_ratio: 0.0
   scan_select_seconds: 4.2
 loss:
   lambda_contrastive: 0.5
@@ -103,6 +116,9 @@ training:
   optimiser: adamw
   scheduler: cosine
   lora_epochs: 3
+  lora_queue_hours: 24.0
+  tft_pretrain_epochs: 100
+  representation_epochs: 100
   grad_clip: 1.0
   device: auto
   num_workers: 0

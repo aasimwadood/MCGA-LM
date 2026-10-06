@@ -1,8 +1,16 @@
+"""The language-backend contract used by the pipeline (paper Sec. 3.5).
+
+Any backend must decode candidate utterances once per turn (Sec. 3.6 decodes
+once, then re-scores) and expose token embeddings for the intent-scoring head.
+``GeneratedUtterance`` carries the fields the evaluation depends on: the
+pragmatic function and the graph entities named, which together decide
+acceptance (``Persona.accepts``) and IHR@K.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Optional, Protocol, Sequence
+from typing import List, Optional, Protocol, Sequence, Tuple
 
 import numpy as np
 
@@ -47,4 +55,13 @@ class LanguageBackend(Protocol):
 
     def embed_tokens(self, text: str, max_len: int = 24) -> np.ndarray:
         """(L, embedding_dim) token embeddings fed to the intent-scoring head."""
+        ...
+
+    def embed_history(self, history: Sequence[Tuple[str, str]], n_tokens: int) -> np.ndarray:
+        """(n_tokens, embedding_dim) ``x_ling``: the last tokens of the dialogue
+        history, embedded with the LLM's own tokeniser (Sec. 3.2)."""
+        ...
+
+    def utterance_embedding(self, text: str) -> np.ndarray:
+        """(embedding_dim,) ``z_utt`` of Eq. (11), from the frozen LLM."""
         ...

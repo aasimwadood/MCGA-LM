@@ -50,10 +50,15 @@ def full_system(cfg: Config) -> Config:
 
 
 def llm_only(cfg: Config) -> Config:
-    """No memory graph, no fatigue adaptation, no gate (Sec. 4.3 baseline 2)."""
+    """No memory graph, no fatigue adaptation, no gate (Sec. 4.3 baseline 2).
+
+    "Prompted with only dialogue history and a brief user profile", so no
+    per-user LoRA fine-tuning either.
+    """
     c = _clone(cfg)
     c.graph.enabled = False
     c.llm.use_graph_prompt = False
+    c.llm.lora_personalisation = False
     c.tft.enabled = False
     c.safety.enabled = False
     return c

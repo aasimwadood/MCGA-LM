@@ -1,4 +1,11 @@
+"""Phase II: temporal cognitive adaptation (paper Sec. 3.3, Eq. 5; Table 3).
 
+A Temporal Fusion Transformer over the last W = 32 contextual embeddings: a
+Variable Selection Network (Eq. 5), an LSTM for local dependencies, then
+multi-head self-attention for long-range patterns such as fatigue accumulating
+across a conversation. The final step yields the Cognitive State Vector
+s_cog,t in R^64 encoding fatigue, cognitive load and arousal.
+"""
 
 from __future__ import annotations
 

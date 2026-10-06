@@ -1,4 +1,9 @@
+"""Non-LLM intent classifier baseline (paper Sec. 4.3, item 7).
 
+Predicts a pragmatic function directly from the multimodal context and reads a
+phrase from a fixed store, isolating what the language model contributes over a
+conventional classifier.
+"""
 
 from __future__ import annotations
 

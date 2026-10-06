@@ -15,12 +15,14 @@ TABLE_7_SACT = {
     "MCGA-LM": (3.1, 0.7),
     "M-LLM": (5.8, 1.2),
 }
-# Cohen's d_s recomputed from Table 7's means and SDs. These are NOT the values
-# Sec. 5.1 prints -- see PAPER_PRINTED_D below and DEVIATION D-09.
+# Cohen's d_s recomputed from Table 7's means and SDs: the values the revised
+# Sec. 5.1 reports. They are NOT the values the original Sec. 5.1 printed -- see
+# ORIGINAL_PRINTED_D below and ERRATA E-1.
 DS_FROM_TABLE_7 = {"TouchChat": 4.46, "LLM-Only": 4.53, "M-LLM": 2.75, "RAG-LLM": 2.28}
 
-# The effect sizes actually printed in Sec. 5.1, with their 95% bootstrap CIs.
-PAPER_PRINTED_D = {
+# The effect sizes the original Sec. 5.1 printed, with their 95% bootstrap CIs.
+# Withdrawn in the revision: no per-persona data for them exists (ERRATA E-1).
+ORIGINAL_PRINTED_D = {
     "TouchChat": (2.34, 1.62, 3.06),
     "LLM-Only": (1.87, 1.21, 2.53),
     "M-LLM": (3.81, 3.23, 5.09),
@@ -30,62 +32,68 @@ PAPER_PRINTED_D = {
 
 @pytest.mark.parametrize("baseline,expected", DS_FROM_TABLE_7.items())
 def test_cohens_ds_matches_the_value_table_7_implies(baseline: str, expected: float) -> None:
-    """d_s is recomputable from a table of means and SDs; this pins the formula."""
+    """d_s is recomputable from a table of means and SDs; this pins the formula
+    and the four values the revised Sec. 5.1 reports."""
     m1, s1 = TABLE_7_SACT["MCGA-LM"]
     m2, s2 = TABLE_7_SACT[baseline]
     assert S.cohens_ds_from_summary(m2, s2, m1, s1) == pytest.approx(expected, abs=0.01)
 
 
-@pytest.mark.parametrize("baseline", list(PAPER_PRINTED_D))
+@pytest.mark.parametrize("baseline", list(ORIGINAL_PRINTED_D))
 def test_printed_effect_sizes_are_not_d_s_from_table_7(baseline: str) -> None:
-    """DEVIATION D-09: Sec. 5.1's effect sizes are not recomputable from Table 7.
+    """ERRATA E-1: the original Sec. 5.1's effect sizes are not recomputable from Table 7.
 
-    Sec. 4.7 says effect sizes are "Cohen's d for paired contrasts" and Sec. 5.1
-    labels them "Cohen's d (paired, over personas)". Every printed value differs
-    from the d_s implied by Table 7's means and SDs, so they must be the paired
-    d_z, which depends on the per-persona difference scores and cannot be
-    checked without them. This test records the discrepancy rather than
-    asserting either value is wrong.
+    The original Sec. 4.7 said effect sizes are "Cohen's d for paired contrasts"
+    and Sec. 5.1 labelled them "Cohen's d (paired, over personas)". Every printed
+    value differs from the d_s implied by Table 7's means and SDs, so they are
+    consistent only with the paired d_z, which needs per-persona difference
+    scores that were never published and have not been found. This test records
+    the discrepancy that led the revision to withdraw them.
     """
     m1, s1 = TABLE_7_SACT["MCGA-LM"]
     m2, s2 = TABLE_7_SACT[baseline]
     d_s = S.cohens_ds_from_summary(m2, s2, m1, s1)
-    printed = PAPER_PRINTED_D[baseline][0]
+    printed = ORIGINAL_PRINTED_D[baseline][0]
     assert abs(d_s - printed) > 0.4, (
         f"{baseline}: d_s from Table 7 is {d_s:.2f}, Sec. 5.1 prints {printed:.2f}"
     )
 
 
 def test_printed_effect_sizes_reorder_the_baselines() -> None:
-    """D-09, the part that is not a rounding difference.
+    """ERRATA E-1, the part that is not a rounding difference.
 
     Under d_s the largest effect is against a baseline with a large mean gap.
-    Sec. 5.1 instead prints its largest effect (3.81) against M-LLM, whose mean
+    The original Sec. 5.1 instead printed its largest effect (3.81) against M-LLM, whose mean
     SACT (5.8) is the second *closest* to MCGA-LM's 3.1. That ordering is only
     reachable with d_z, and only if the MCGA-LM/M-LLM differences vary far less
     across personas than the others -- about five times less.
     """
     m1, _ = TABLE_7_SACT["MCGA-LM"]
     by_ds = sorted(DS_FROM_TABLE_7, key=lambda k: -DS_FROM_TABLE_7[k])
-    by_printed = sorted(PAPER_PRINTED_D, key=lambda k: -PAPER_PRINTED_D[k][0])
+    by_printed = sorted(ORIGINAL_PRINTED_D, key=lambda k: -ORIGINAL_PRINTED_D[k][0])
     assert by_ds[0] != by_printed[0]
     assert by_printed[0] == "M-LLM"
 
     implied = {
-        k: S.implied_sd_of_differences(TABLE_7_SACT[k][0], m1, PAPER_PRINTED_D[k][0])
-        for k in PAPER_PRINTED_D
+        k: S.implied_sd_of_differences(TABLE_7_SACT[k][0], m1, ORIGINAL_PRINTED_D[k][0])
+        for k in ORIGINAL_PRINTED_D
     }
     assert implied["M-LLM"] == pytest.approx(0.71, abs=0.02)
     assert implied["TouchChat"] / implied["M-LLM"] > 4.0
 
 
-@pytest.mark.parametrize("baseline", list(PAPER_PRINTED_D))
-def test_printed_intervals_are_ordered_and_exclude_the_null(baseline: str) -> None:
-    """Sec. 5.1: "all large effects (d > 0.8)", with 95% bootstrap intervals."""
-    d, low, high = PAPER_PRINTED_D[baseline]
-    assert low < high
-    assert low > 0.0, "an interval crossing zero would not support the claim"
-    assert d > 0.8
+@pytest.mark.parametrize("baseline", list(DS_FROM_TABLE_7))
+def test_revised_effect_sizes_stay_large_at_the_rounding_extremes(baseline: str) -> None:
+    """The revised Sec. 5.1 keeps "all large effects (d > 0.8)", now as d_s.
+
+    Table 7 rounds to one decimal place, so each mean and SD may be off by up to
+    0.05. The claim has to survive the least favourable combination: the
+    smallest mean gap with the largest SDs.
+    """
+    m1, s1 = TABLE_7_SACT["MCGA-LM"]
+    m2, s2 = TABLE_7_SACT[baseline]
+    h = 0.05
+    assert S.cohens_ds_from_summary(m2 - h, s2 + h, m1 + h, s1 + h) > 0.8
 
 
 def test_cohens_dz_is_the_paired_form() -> None:
@@ -113,7 +121,7 @@ def test_implied_sd_of_differences_inverts_d_z() -> None:
 
 # ------------------------------------------------- bootstrap effect sizes -- #
 def test_bootstrap_effect_size_brackets_the_point_estimate() -> None:
-    """Sec. 5.1 reports every d with a 95% bootstrap percentile CI."""
+    """The original Sec. 5.1 reported every d with a 95% bootstrap percentile CI."""
     rng = np.random.default_rng(0)
     a = rng.normal(3.1, 0.7, 20)
     b = rng.normal(12.2, 2.8, 20)
@@ -141,8 +149,8 @@ def test_unpaired_bootstrap_allows_unequal_sizes() -> None:
     assert np.isfinite(out["d_s"])
 
 
-def test_format_effect_size_matches_the_papers_notation() -> None:
-    """Sec. 5.1 prints "2.34 [1.62, 3.06]"."""
+def test_format_effect_size_matches_the_original_notation() -> None:
+    """The original Sec. 5.1 printed "2.34 [1.62, 3.06]"."""
     text = S.format_effect_size({"d_s": 2.34, "ci_low": 1.62, "ci_high": 3.06})
     assert text == "2.34 [1.62, 3.06]"
 
@@ -218,7 +226,7 @@ def test_bootstrap_difference_brackets_the_observed_gap() -> None:
     assert out["observed"] < 0  # ECE of the grounded system is lower
 
 
-def test_stars_thresholds_match_the_table_footnotes() -> None:
+def test_stars_thresholds_match_the_original_table_footnotes() -> None:
     assert S.stars(0.0005) == "***" and S.stars(0.005) == "**"
     assert S.stars(0.04) == "*" and S.stars(0.4) == "n.s."
 
@@ -227,7 +235,7 @@ def test_post_hoc_power_behaves_monotonically() -> None:
     """Sec. 3.8 claims >90% power for Cohen's f >= 0.40 at N = 20, k = 5.
 
     Whether that threshold is met depends on the noncentrality convention (see
-    D-03): with no within-subject correlation this implementation gives ~0.89,
+    ``post_hoc_power``): with no within-subject correlation this implementation gives ~0.89,
     and it exceeds 0.90 once rho > 0, as a repeated-measures calculator assumes.
     The properties asserted here are the ones that do not depend on that choice.
     """
