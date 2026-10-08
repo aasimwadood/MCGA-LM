@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fatigue adaptation and its sensitivity (paper Sec. 4.5, 5.4, 5.5, Fig. 5).
+"""Fatigue adaptation and its sensitivity (paper Sec. 4.6, 5.4, 5.5, Fig. 4).
 
     python scripts/run_fatigue_study.py --out runs/
 
@@ -94,13 +94,13 @@ def main() -> None:
             print(f"  half-life {half_life:4.0f} min, peak {peak:.1f}: "
                   + "  ".join(f"{n} WPM {row[f'{n}_wpm']:.1f}" for n in systems))
 
-    # --- Fig. 5 ------------------------------------------------------------ #
+    # --- Fig. 4 ------------------------------------------------------------ #
     model_f = FatigueModel(
         half_life_min=cfg.simulation.fatigue_half_life_min, peak=cfg.simulation.fatigue_peak, noise=0.0
     )
     minutes = np.linspace(0, cfg.simulation.session_minutes, 121)
     plot_fatigue_trajectory(
-        minutes, model_f.value(minutes), model_f.adapted_value(minutes), target / "fig5_fatigue.png"
+        minutes, model_f.value(minutes), model_f.adapted_value(minutes), target / "fig4_fatigue.png"
     )
     save_json({"provenance": provenance_note(), "rested_vs_fatigued": rows, "sensitivity_grid": grid},
               target / "fatigue_study.json")

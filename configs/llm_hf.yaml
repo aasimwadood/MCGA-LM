@@ -1,10 +1,11 @@
-# configs/default.yaml with the weight-free template backend in place of
-# LLaMA-3-8B, so the pipeline runs on CPU with no downloads. Only the language
-# backend and d_w (inputs.ling_dim) differ. The template backend has no LoRA
-# adapters, so per-user LoRA fine-tuning is reported as skipped, and results
-# from it are not the paper's.
+# The LLaMA-3-8B-Instruct configuration named in the paper's Data and Code
+# Availability statement: configs/default.yaml with LLaMA-3-8B-Instruct in 4-bit
+# NF4 and per-user LoRA (r=16, alpha=32; Table 2) as the language backend. Only
+# the backend, d_w (inputs.ling_dim = 4096, LLaMA's hidden size, Sec. 3.2) and
+# the name differ. Needs a CUDA GPU, gated weights and the optional extras:
+#   pip install -e '.[llm]' && huggingface-cli login
 
-name: mcga-lm-cpu
+name: mcga-lm-llm-hf
 seed: 1234
 inputs:
   eeg_channels: 4
@@ -19,7 +20,7 @@ inputs:
   env_partner_classes: 8
   env_scalars: 3
   ling_tokens: 10
-  ling_dim: 256
+  ling_dim: 4096
 perceiver:
   num_latents: 256
   latent_dim: 512
@@ -53,7 +54,7 @@ graph:
   dropout: 0.1
   enabled: true
 llm:
-  backend: template
+  backend: hf
   model_name: meta-llama/Meta-Llama-3-8B-Instruct
   quantisation: nf4
   lora_rank: 16

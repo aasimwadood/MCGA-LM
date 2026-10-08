@@ -35,7 +35,7 @@ def test_context_embedding_is_mean_pooled_to_D(torch_mod, small_cfg) -> None:
 
 
 def test_bottleneck_size_is_independent_of_input_length(torch_mod, small_cfg) -> None:
-    """The point of the bottleneck (Sec. 3.2, Sec. 4.9: cost independent of N)."""
+    """The point of the bottleneck (Sec. 3.2, Sec. 4.10: cost independent of N)."""
     from mcga_lm.models.perceiver_io import PerceiverIOEncoder
 
     enc = PerceiverIOEncoder(small_cfg.inputs, small_cfg.perceiver).eval()
@@ -47,7 +47,7 @@ def test_bottleneck_size_is_independent_of_input_length(torch_mod, small_cfg) ->
 
 
 def test_cross_attention_ablation_changes_the_path_but_not_the_interface(torch_mod, small_cfg) -> None:
-    """Sec. 4.4 "\\ cross-attention": early concatenation + linear projection."""
+    """Sec. 4.5 "\\ cross-attention": early concatenation + linear projection."""
     from mcga_lm.models.perceiver_io import PerceiverIOEncoder
 
     small_cfg.perceiver.use_cross_attention = False
@@ -58,7 +58,7 @@ def test_cross_attention_ablation_changes_the_path_but_not_the_interface(torch_m
 
 
 def test_late_fusion_ablation_matches_the_encoder_interface(torch_mod, small_cfg) -> None:
-    """Sec. 4.4 "\\ Perceiver IO": per-modality MLP, concatenated."""
+    """Sec. 4.5 "\\ Perceiver IO": per-modality MLP, concatenated."""
     from mcga_lm.models.perceiver_io import LateFusionEncoder, build_context_encoder
 
     enc = build_context_encoder(small_cfg.inputs, small_cfg.perceiver, ablate_perceiver=True)

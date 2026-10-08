@@ -1,4 +1,4 @@
-"""Phase II: temporal cognitive adaptation (paper Sec. 3.3, Eq. 5; Table 3).
+"""Phase II: temporal cognitive adaptation (paper Sec. 3.3, Eq. 5; Table 2).
 
 A Temporal Fusion Transformer over the last W = 32 contextual embeddings: a
 Variable Selection Network (Eq. 5), an LSTM for local dependencies, then
@@ -95,7 +95,7 @@ class TemporalFusionTransformer(nn.Module):
         )
 
     def _clamped_low_fatigue(self, sequence: torch.Tensor) -> CognitiveState:
-        """Ablation "\\ TFT" (Sec. 4.4): s_cog fixed to the low-fatigue state."""
+        """Ablation "\\ TFT" (Sec. 4.5): s_cog fixed to the low-fatigue state."""
         b = sequence.shape[0]
         device, dtype = sequence.device, sequence.dtype
         zeros = torch.zeros(b, device=device, dtype=dtype)

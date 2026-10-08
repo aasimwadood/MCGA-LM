@@ -18,21 +18,21 @@ import yaml
 
 
 # --------------------------------------------------------------------------- #
-# Phase I: multimodal contextual grounding (paper Sec. 3.2, Table 3)
+# Phase I: multimodal contextual grounding (paper Sec. 3.2, Table 2)
 # --------------------------------------------------------------------------- #
 @dataclass
 class PerceiverConfig:
-    """Perceiver IO encoder (Sec. 3.2, Eqs. 3-4; Table 3)."""
+    """Perceiver IO encoder (Sec. 3.2, Eqs. 3-4; Table 2)."""
 
-    num_latents: int = 256  # M, Table 3
-    latent_dim: int = 512  # D, Table 3
-    cross_heads: int = 8  # Table 3
+    num_latents: int = 256  # M, Table 2
+    latent_dim: int = 512  # D, Table 2
+    cross_heads: int = 8  # Table 2
     self_heads: int = 8  # A-01: not given; mirrors cross_heads
     depth: int = 2  # A-01: number of (cross, self) blocks
     self_attn_per_block: int = 2  # A-01
     ff_mult: int = 2  # A-01: FFN expansion in Eq. (4)
     dropout: float = 0.1  # A-01
-    # Ablation switch (Sec. 4.4 "\ cross-attention"): replace the cross-attention
+    # Ablation switch (Sec. 4.5 "\ cross-attention"): replace the cross-attention
     # bottleneck with early concatenation + linear projection.
     use_cross_attention: bool = True
 
@@ -64,9 +64,9 @@ class InputDims:
     # x_ling: last L = 10 tokens embedded with the LLM tokeniser
     ling_tokens: int = 10  # L, Sec. 3.2
     # d_w: history is "embedded using the same tokeniser as the downstream LLM"
-    # (Sec. 3.2), so this is LLaMA-3-8B's hidden size. configs/cpu.yaml sets 256
-    # for the template backend.
-    ling_dim: int = 4096
+    # (Sec. 3.2). 256 for the default template backend; configs/llm_hf.yaml sets
+    # 4096, LLaMA-3-8B's hidden size.
+    ling_dim: int = 256
 
     @property
     def phys_dim(self) -> int:
@@ -78,32 +78,32 @@ class InputDims:
 
 
 # --------------------------------------------------------------------------- #
-# Phase II: temporal cognitive adaptation (paper Sec. 3.3, Table 3)
+# Phase II: temporal cognitive adaptation (paper Sec. 3.3, Table 2)
 # --------------------------------------------------------------------------- #
 @dataclass
 class TFTConfig:
-    """Temporal Fusion Transformer (Sec. 3.3, Eq. 5; Table 3)."""
+    """Temporal Fusion Transformer (Sec. 3.3, Eq. 5; Table 2)."""
 
-    window: int = 32  # W, Table 3 (~160 s)
-    lstm_hidden: int = 128  # Table 3
-    attn_heads: int = 4  # Table 3
+    window: int = 32  # W, Table 2 (~160 s)
+    lstm_hidden: int = 128  # Table 2
+    attn_heads: int = 4  # Table 2
     state_dim: int = 64  # D_c, Sec. 3.3
     dropout: float = 0.1  # ASSUMPTION
-    # Ablation switch (Sec. 4.4 "\ TFT"): clamp s_cog to the "low fatigue" state.
+    # Ablation switch (Sec. 4.5 "\ TFT"): clamp s_cog to the "low fatigue" state.
     enabled: bool = True
 
 
 # --------------------------------------------------------------------------- #
-# Phase III: personalised intent graph memory (paper Sec. 3.4, Table 3)
+# Phase III: personalised intent graph memory (paper Sec. 3.4, Table 2)
 # --------------------------------------------------------------------------- #
 @dataclass
 class GraphConfig:
-    """Dynamic User Intent Graph + GAT (Sec. 3.4, Eqs. 6-7; Table 3)."""
+    """Dynamic User Intent Graph + GAT (Sec. 3.4, Eqs. 6-7; Table 2)."""
 
-    node_dim: int = 300  # GloVe-sized node embeddings, Sec. 3.4 / Table 3
-    gat_heads: int = 4  # K, Table 3
+    node_dim: int = 300  # GloVe-sized node embeddings, Sec. 3.4 / Table 2
+    gat_heads: int = 4  # K, Table 2
     gat_hidden: int = 64  # ASSUMPTION: per-head output width
-    top_k: int = 5  # K_top, Table 3 ("typically K = 5")
+    top_k: int = 5  # K_top, Table 2 ("typically K = 5")
     half_life_days: float = 30.0  # Sec. 3.4 edge-weight decay
     prune_threshold: float = 0.05  # ASSUMPTION: "infrequent edges pruned"
     target_nodes: int = 400  # Sec. 4.1: persona graphs hold ~400 nodes
@@ -122,36 +122,37 @@ class GraphConfig:
     node_scoring: str = "incoming"
     negative_slope: float = 0.2  # ASSUMPTION: standard GAT LeakyReLU slope
     dropout: float = 0.1  # ASSUMPTION
-    # Ablation switch (Sec. 4.4 "\ GAT"): drop sub-graph retrieval entirely.
+    # Ablation switch (Sec. 4.5 "\ GAT"): drop sub-graph retrieval entirely.
     enabled: bool = True
 
 
 # --------------------------------------------------------------------------- #
-# Phase IV: retrieval-augmented intent synthesis (paper Sec. 3.5, Table 3)
+# Phase IV: retrieval-augmented intent synthesis (paper Sec. 3.5, Table 2)
 # --------------------------------------------------------------------------- #
 @dataclass
 class LLMConfig:
-    """RAG generation stage (Sec. 3.5; Table 3).
+    """RAG generation stage (Sec. 3.5; Table 2).
 
-    ``backend='hf'`` (default) is the paper's LLaMA-3-8B-Instruct, which needs a
-    CUDA GPU and gated weights. ``backend='template'`` is a weight-free stand-in
-    that runs on CPU; configs/cpu.yaml selects it.
+    ``backend='template'`` (default) is a weight-free template realiser that runs
+    on CPU, as the paper's Data and Code Availability statement describes.
+    ``backend='hf'`` is LLaMA-3-8B-Instruct (Table 2), which needs a CUDA GPU and
+    gated weights; configs/llm_hf.yaml selects it.
     """
 
-    backend: str = "hf"  # 'hf' | 'template'
-    model_name: str = "meta-llama/Meta-Llama-3-8B-Instruct"  # Table 4
-    quantisation: str = "nf4"  # Table 3 (4-bit NF4)
-    lora_rank: int = 16  # r, Table 3
-    lora_alpha: int = 32  # alpha, Table 3
+    backend: str = "template"  # 'template' | 'hf'
+    model_name: str = "meta-llama/Meta-Llama-3-8B-Instruct"  # Table 3
+    quantisation: str = "nf4"  # Table 2 (4-bit NF4)
+    lora_rank: int = 16  # r, Table 2
+    lora_alpha: int = 32  # alpha, Table 2
     lora_dropout: float = 0.05  # ASSUMPTION
     lora_targets: List[str] = field(  # Sec. 3.5: "all attention matrices and FF gates"
         default_factory=lambda: ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj"]
     )
     top_p: float = 0.9  # Sec. 3.5
-    temp_low_fatigue: float = 1.2  # Sec. 3.5 / Table 3
+    temp_low_fatigue: float = 1.2  # Sec. 3.5 / Table 2
     temp_high_fatigue: float = 0.5  # Sec. 3.5
     history_turns: int = 10  # Sec. 3.5 component 4
-    max_new_tokens: int = 24  # ASSUMPTION: mean L = 20 tokens in Sec. 4.9
+    max_new_tokens: int = 24  # ASSUMPTION: mean L = 20 tokens in Sec. 4.10
     # Verbosity ladder used by the fatigue-adaptive prompt (Sec. 3.5 component 2).
     max_words_by_fatigue: Dict[str, int] = field(
         default_factory=lambda: {"low": 14, "moderate": 9, "high": 5}
@@ -160,10 +161,10 @@ class LLMConfig:
     candidates_by_fatigue: Dict[str, int] = field(
         default_factory=lambda: {"low": 3, "moderate": 2, "high": 1}
     )
-    # Ablation switch (Sec. 4.3 M-LLM / Sec. 4.4 "\ GAT"): generic prompt only.
+    # Ablation switch (Sec. 4.4 M-LLM / Sec. 4.5 "\ GAT"): generic prompt only.
     use_graph_prompt: bool = True
     # Per-user LoRA fine-tuning on accepted utterances (Sec. 3.5). Off for the
-    # LLM-Only baseline, which Sec. 4.3 describes as "prompted with only
+    # LLM-Only baseline, which Sec. 4.4 describes as "prompted with only
     # dialogue history and a brief user profile".
     lora_personalisation: bool = True
     # Template-backend scoring knobs (ASSUMPTION A-30, no counterpart in the
@@ -176,18 +177,17 @@ class LLMConfig:
 
 
 # --------------------------------------------------------------------------- #
-# Phase V: confidence-aware clinical filtering (paper Sec. 3.6, Table 3)
+# Phase V: confidence-aware clinical filtering (paper Sec. 3.6, Table 2)
 # --------------------------------------------------------------------------- #
 @dataclass
 class SafetyConfig:
     """Bayesian uncertainty gate (Sec. 3.6, Eq. 8; Sec. 3.6 calibration note)."""
 
-    mc_passes: int = 20  # N, Table 3
-    # Where the N stochastic passes of Eq. (8) run. The paper says both:
-    # Sec. 3.6 keeps "dropout in the LLM's LoRA modules" active, while Table 6
-    # and Sec. 4.10 apply it to "the intent-scoring head only, not by re-running
-    # generation". 'scoring_head' (default) matches Table 6's latency figures;
-    # 'lora' runs Eq. (8) over the LLM's token probabilities and needs the 'hf'
+    mc_passes: int = 20  # N, Table 2
+    # Where the N stochastic passes of Eq. (8) run. 'scoring_head' (default) is
+    # Sec. 3.6's intent-scoring head, which Table 5's latency figures assume.
+    # 'lora' keeps dropout in the LLM's LoRA modules, as Sec. 3.6 said before
+    # v3; it runs Eq. (8) over the LLM's token probabilities and needs the 'hf'
     # backend. See ERRATA.md, E-12.
     mc_dropout_site: str = "scoring_head"  # 'scoring_head' | 'lora'
     tau_default: float = 0.15  # Sec. 3.6 "default tau = 0.15"
@@ -195,10 +195,10 @@ class SafetyConfig:
     tau_grid_stop: float = 0.30
     tau_grid_step: float = 0.02
     tau_init: float = 0.05  # tau_0, Sec. 3.6
-    far_budget: float = 0.05  # FAR <= 5%, Sec. 3.6 / Sec. 4.2
+    far_budget: float = 0.05  # FAR <= 5%, Sec. 3.6 / Sec. 4.3
     calibration_samples: int = 50  # "~50 low-confidence candidates", Sec. 3.6
     dropout_p: float = 0.1  # ASSUMPTION: dropout rate inside the scoring head
-    # Ablation switch (Sec. 4.4 "\ Bayesian Gate").
+    # Ablation switch (Sec. 4.5 "\ Bayesian Gate").
     enabled: bool = True
 
     # Sec. 3.6: "select the smallest tau with FAR <= 0.05". FAR never falls as
@@ -263,9 +263,8 @@ class InferenceConfig:
     # actually being breakage. 2.0-3.0 is the sensible starting range once
     # retrieval is fixed; check the abstention rate when enabling it.
     min_retrieval_mass_ratio: float = 0.0
-    # T_select, Sec. 5.2. NOTE (D-12): with K=3 and P=0.89 this yields 13.9
-    # bits/min, not the 18.3 Sec. 5.2 prints; 3.2 s would. We keep the
-    # paper's stated value rather than the one that reproduces its result.
+    # T_select, Sec. 4.2 and 5.2. With K=3 and P=0.89 this gives the 13.9
+    # bits/min Sec. 5.2 prints (it printed 18.3 before v3; ERRATA.md, E-2).
     scan_select_seconds: float = 4.2
 
     @property
@@ -288,26 +287,26 @@ class LossConfig:
 
 
 # --------------------------------------------------------------------------- #
-# Training (paper Sec. 3.7, 4.8)
+# Training (paper Sec. 3.7, 4.9)
 # --------------------------------------------------------------------------- #
 @dataclass
 class TrainingConfig:
-    epochs: int = 100  # Sec. 4.8
-    batch_size: int = 128  # Sec. 4.8
-    lr: float = 1e-4  # Sec. 4.8 (AdamW, cosine decay)
+    epochs: int = 100  # Sec. 4.9
+    batch_size: int = 128  # Sec. 4.9
+    lr: float = 1e-4  # Sec. 4.9 (AdamW, cosine decay)
     weight_decay: float = 0.01  # ASSUMPTION: AdamW default
-    optimiser: str = "adamw"  # Sec. 4.8
-    scheduler: str = "cosine"  # Sec. 4.8
-    lora_epochs: int = 3  # Sec. 4.8 "LoRA fine-tuning converges in 3 epochs per user"
+    optimiser: str = "adamw"  # Sec. 4.9
+    scheduler: str = "cosine"  # Sec. 4.9
+    lora_epochs: int = 3  # Sec. 4.9 "LoRA fine-tuning converges in 3 epochs per user"
     # Sec. 3.6: accepted utterances "after a 24-hour on-device queue, fine-tune
     # the LoRA adapters".
     lora_queue_hours: float = 24.0
-    # Stage 2 of Sec. 3.7 (TFT pre-training). Sec. 4.8 gives 100 epochs for
+    # Stage 2 of Sec. 3.7 (TFT pre-training). Sec. 4.9 gives 100 epochs for
     # "the Perceiver IO and TFT", which is read here as 100 for each stage.
     tft_pretrain_epochs: int = 100
     # Stage-3 representation training: the Perceiver/TFT/GAT pass that fits the
     # retrieval head. The paper gives 100 epochs for encoder pre-training
-    # (Sec. 4.8) and 3 for LoRA, but no figure for this stage, which is where
+    # (Sec. 4.9) and 3 for LoRA, but no figure for this stage, which is where
     # the GAT is actually fitted.
     #
     # This used to borrow ``lora_epochs``, i.e. 3 -- conflating "LoRA converges
@@ -322,34 +321,34 @@ class TrainingConfig:
 
 
 # --------------------------------------------------------------------------- #
-# Simulation / evaluation (paper Sec. 4.1, 4.5, 4.7)
+# Simulation / evaluation (paper Sec. 4.1, 4.2, 4.6, 4.8)
 # --------------------------------------------------------------------------- #
 @dataclass
 class SimulationConfig:
-    """Synthetic persona suite and fatigue model (Sec. 4.1, 4.5)."""
+    """Synthetic persona suite and fatigue model (Sec. 4.1, 4.2, 4.6)."""
 
     n_personas: int = 20  # Sec. 4.1
     n_als: int = 10  # Sec. 4.1
     n_cerebral_palsy: int = 6  # Sec. 4.1
     n_brainstem_stroke: int = 4  # Sec. 4.1
     turns_per_session: int = 60  # ASSUMPTION: one turn per simulated minute
-    session_minutes: float = 60.0  # Sec. 4.5
+    session_minutes: float = 60.0  # Sec. 4.6
     seeds: List[int] = field(default_factory=lambda: [0, 1, 2, 3, 4])  # Sec. 3.8: 5 reps
-    # Exponential fatigue rise, Sec. 4.5 / sensitivity grid Sec. 5.5.
+    # Exponential fatigue rise, Sec. 4.6 / sensitivity grid Sec. 5.5.
     fatigue_half_life_min: float = 30.0  # midpoint of the 15-60 min grid
     fatigue_peak: float = 0.8  # midpoint-ish of the 0.5-0.9 grid
     fatigue_noise: float = 0.02  # ASSUMPTION
     # Simulated-user behaviour used to score SACT/FAR without human raters.
     user_accept_threshold: float = 0.55  # ASSUMPTION: not specified by the paper
-    reduced_sensor_set: bool = False  # Sec. 4.6 / 5.6: EDA + PPG + monocular gaze
+    reduced_sensor_set: bool = False  # Sec. 4.7 / 5.6: EDA + PPG + monocular gaze
 
 
 @dataclass
 class EvalConfig:
-    words_per_turn_overhead_s: float = 1.0  # ASSUMPTION: read/confirm time per turn
-    ece_bins: int = 10  # Sec. 4.2
-    bootstrap_iters: int = 10_000  # Sec. 4.7
-    holm_alpha: float = 0.05  # Sec. 4.7
+    words_per_turn_overhead_s: float = 1.0  # Sec. 4.2: "+ 1 s per turn"
+    ece_bins: int = 10  # Sec. 4.3
+    bootstrap_iters: int = 10_000  # Sec. 4.8
+    holm_alpha: float = 0.05  # Sec. 4.8
 
 
 @dataclass

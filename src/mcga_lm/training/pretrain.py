@@ -1,4 +1,4 @@
-"""Stages 1-2: multimodal encoder and TFT pre-training (paper Sec. 3.7, 4.8).
+"""Stages 1-2: multimodal encoder and TFT pre-training (paper Sec. 3.7, 4.9).
 
 Stage 1: "Perceiver IO and TFT are jointly pre-trained on the aggregated public
 datasets ... using MSE for fatigue regression plus a contrastive loss aligning
@@ -13,7 +13,7 @@ Stage 2: "TFT pre-training: pre-trained on the same aggregated physiological
 datasets". It repeats stage 1's data with no stated difference (E-9); here it is
 a second pass that trains the TFT alone with the encoder frozen.
 
-Sec. 4.8: 100 epochs, batch size 128, AdamW at 1e-4 with cosine decay.
+Sec. 4.9: 100 epochs, batch size 128, AdamW at 1e-4 with cosine decay.
 
 When MAMEM/CLAS/WESAD are absent this falls back to
 ``synthetic_pretraining_corpus`` and says so in the report's ``source`` field --

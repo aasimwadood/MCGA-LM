@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cold-start personalisation learning curve (paper Sec. 6.2, Fig. 6).
+"""Cold-start personalisation learning curve (paper Sec. 6.2, Fig. 5).
 
     python scripts/run_cold_start.py --out runs/
 
@@ -56,7 +56,7 @@ def main() -> None:
     backend = build_backend(cfg)
     target = out_dir(cfg, "cold_start")
 
-    banner("Cold-start personalisation (paper Sec. 6.2, Fig. 6)")
+    banner("Cold-start personalisation (paper Sec. 6.2, Fig. 5)")
     vcfg = get_variant("MCGA-LM").apply(cfg)
     model_or_models, report = train(vcfg, personas, backend, epochs=args.epochs, head_epochs=2,
                                     pretrained=args.pretrained, per_persona=args.per_persona)
@@ -132,7 +132,7 @@ def main() -> None:
     print(f"  RAG-LLM reference SACT: {baseline_sact:.2f}")
 
     crossing = next((x for x, m in zip(xs, means) if m <= baseline_sact), None)
-    plot_learning_curve(xs, means, los, his, baseline_sact, target / "fig6_cold_start.png",
+    plot_learning_curve(xs, means, los, his, baseline_sact, target / "fig5_cold_start.png",
                         full_personalisation_at=crossing)
     save_json({"provenance": provenance_note(), "baseline_sact": baseline_sact,
                "curve": [{"n_accepted": x, "sact": m, "ci_low": lo, "ci_high": hi}

@@ -47,7 +47,7 @@ def test_query_is_the_concatenation_of_context_and_state(torch_mod, small_cfg, p
 
 
 def test_gat_disabled_configuration_has_no_graph_stage(torch_mod, small_cfg, persona) -> None:
-    """Ablation "\\ GAT" / the M-LLM baseline (Sec. 4.3-4.4)."""
+    """Ablation "\\ GAT" / the M-LLM baseline (Sec. 4.4-4.5)."""
     from mcga_lm.pipeline import MCGALM
 
     small_cfg.graph.enabled = False
@@ -148,6 +148,8 @@ def test_per_persona_training_returns_one_model_and_one_tau_each(torch_mod, smal
     from mcga_lm.training.personalise import train
 
     small_cfg.simulation.turns_per_session = 4
+    # "auto" picks MPS on Apple Silicon, whose attention kernel has no dropout.
+    small_cfg.training.device = "cpu"
     backend = build_backend(small_cfg.llm, embedding_dim=small_cfg.inputs.ling_dim)
     models, report = train(
         small_cfg, personas, backend, epochs=1, head_epochs=1, per_persona=True

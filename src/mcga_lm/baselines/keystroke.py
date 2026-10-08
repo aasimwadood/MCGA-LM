@@ -1,4 +1,4 @@
-"""Keystroke-level baselines (paper Sec. 4.3, items 1, 5, 6).
+"""Keystroke-level baselines (paper Sec. 4.4, items 1, 5, 6).
 
   1. Commercial AAC -- a 16-cell grid with row-column scanning, simulated with a
      keystroke-level model and validated against the published 10.5 +/- 2.1 WPM.
@@ -26,7 +26,7 @@ class KLMParams:
 
     scan_dwell_s: float = 0.85  # time the highlight rests on each row/column
     activation_s: float = 0.30  # time to make one switch activation
-    grid_rows: int = 4  # 16-cell grid (Sec. 4.3)
+    grid_rows: int = 4  # 16-cell grid (Sec. 4.4)
     grid_cols: int = 4
     page_change_presses: int = 2  # cost of navigating to another vocabulary page
     prediction_cells: int = 5  # completion candidates offered
@@ -53,7 +53,7 @@ class KeystrokeResult:
 
     @property
     def kspc(self) -> float:
-        """Keystrokes per character (Sec. 4.2, Table 7 footnote)."""
+        """Keystrokes per character (Sec. 4.3, Table 6 footnote)."""
         return self.selections / self.characters if self.characters else float("nan")
 
     @property
@@ -166,7 +166,7 @@ class BigramRanker(Ranker):
     """Baseline 5: smoothed word bigram over the AAC-Intent-Corpus training split.
 
     "It uses no dialogue context, no personalisation, no physiological input, and
-    performs no generation" (Sec. 4.3).
+    performs no generation" (Sec. 4.4).
     """
 
     def __init__(self, sentences: Iterable[str], add_k: float = 0.1) -> None:
@@ -190,7 +190,7 @@ class BigramRanker(Ranker):
 
 
 class AdaptiveFrequencyRanker(Ranker):
-    """Baseline 6: frequency- and recency-adaptive cell ranking (Sec. 4.3).
+    """Baseline 6: frequency- and recency-adaptive cell ranking (Sec. 4.4).
 
     "cell positions are re-ordered as the persona's usage statistics accumulate,
     initialised per persona from that persona's training-split utterances."

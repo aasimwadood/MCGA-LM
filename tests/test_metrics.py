@@ -1,4 +1,4 @@
-"""Evaluation metrics (paper Sec. 4.2)."""
+"""Evaluation metrics (paper Sec. 4.3)."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ def test_sact_is_a_plain_mean() -> None:
 
 
 def test_wolpaw_itr_matches_the_printed_formula() -> None:
-    """Sec. 4.2 / Sec. 5.2: ITR = (1/T)[log2 N + P log2 P + (1-P) log2((1-P)/(N-1))]."""
+    """Sec. 4.3 / Sec. 5.2: ITR = (1/T)[log2 N + P log2 P + (1-P) log2((1-P)/(N-1))]."""
     n, p, t = 3, 0.89, 4.2
     expected = (math.log2(n) + p * math.log2(p) + (1 - p) * math.log2((1 - p) / (n - 1))) / (t / 60.0)
     assert M.information_transfer_rate(n, p, t) == pytest.approx(expected)
@@ -109,7 +109,7 @@ def test_kspc_definition() -> None:
 
 
 def test_summary_helpers_tolerate_empty_samples() -> None:
-    """Table 7 marks SACT "n/r" for the character-level baselines, so the
+    """Table 6 marks SACT "n/r" for the character-level baselines, so the
     aggregation helpers must survive an all-missing column."""
     from mcga_lm.utils import mean_sd, median_iqr
 

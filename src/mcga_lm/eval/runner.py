@@ -1,6 +1,6 @@
-"""Experiment runner: Algorithm 1 over every persona and seed (paper Sec. 4.2).
+"""Experiment runner: Algorithm 1 over every persona and seed (paper Sec. 4.3).
 
-Drives the full turn loop for each system configuration, aggregates the Sec. 4.2
+Drives the full turn loop for each system configuration, aggregates the Sec. 4.3
 metric set per persona, and applies the Sec. 3.8 design -- Latin-square
 counterbalancing and five seeded replicates, with mean +/- SD across personas.
 
@@ -35,6 +35,7 @@ from ..safety.gate import BayesianGate
 from ..utils import get_logger, mean_sd, median_iqr
 from . import metrics as M
 from .hallucination import HallucinationDetector, summarise
+from .stats import kl_from_diagonal
 
 logger = get_logger(__name__)
 
@@ -117,7 +118,7 @@ def run_generative_system(
     fatigue_peak: Optional[float] = None,
     keep_turn_records: bool = False,
 ) -> Tuple[SystemResult, List[TurnResult]]:
-    """Run Algorithm 1 over every persona and seed, and aggregate (Sec. 4.2)."""
+    """Run Algorithm 1 over every persona and seed, and aggregate (Sec. 4.3)."""
     device = device or torch.device("cpu")
     encoder = TurnEncoder(
         cfg.inputs, reduced_sensor_set=cfg.simulation.reduced_sensor_set, backend=backend
@@ -207,12 +208,13 @@ def run_generative_system(
 def _score_turns(
     results: Sequence[TurnResult], verdicts: Sequence, turns: Sequence, cfg: Config
 ) -> Dict[str, float]:
-    """All Sec. 4.2 metrics for one persona-session."""
+    """All Sec. 4.3 metrics for one persona-session."""
     halluc = summarise(verdicts)
     references = [t.intent.reference for t, r in zip(turns, results) if r.accepted and r.utterance]
     hypotheses = [r.utterance for r in results if r.accepted and r.utterance]
     confidences = [r.confidence for r in results if r.n_offered > 0]
     correct = [r.accepted for r in results if r.n_offered > 0]
+    curve = M.calibration_curve(confidences, correct, cfg.evaluation.ece_bins)
     ihr3 = M.intent_hit_rate(results, 3)
     return {
         "sact": M.sact(results),
@@ -228,6 +230,8 @@ def _score_turns(
         "bleu4": M.corpus_bleu(references, hypotheses),
         "rouge_l": M.corpus_rouge_l(references, hypotheses),
         "ece": M.expected_calibration_error(confidences, correct, cfg.evaluation.ece_bins),
+        # Sec. 4.8 compares calibration curves by KL divergence from the diagonal.
+        "calibration_kl": kl_from_diagonal(curve["confidence"], curve["accuracy"], weights=curve["count"]),
         "itr_intent": M.information_transfer_rate(3, ihr3, cfg.inference.scan_select_seconds),
         "mean_clarifications": float(np.mean([r.clarification_rounds for r in results])),
         "acceptance": float(np.mean([r.accepted for r in results])),
@@ -235,7 +239,7 @@ def _score_turns(
 
 
 # --------------------------------------------------------------------------- #
-# Keystroke-level baselines (Sec. 4.3 items 1, 5, 6)
+# Keystroke-level baselines (Sec. 4.4 items 1, 5, 6)
 # --------------------------------------------------------------------------- #
 def run_keystroke_baseline(
     name: str,
@@ -248,12 +252,12 @@ def run_keystroke_baseline(
     """Simulate a non-generative baseline over the same reference utterances."""
     params = params or KLMParams()
     result = SystemResult(name=name, split=IN_DISTRIBUTION)
-    # Baseline 5 is global: "no dialogue context, no personalisation" (Sec. 4.3).
+    # Baseline 5 is global: "no dialogue context, no personalisation" (Sec. 4.4).
     global_ranker = BigramRanker(corpus_sentences) if name == "Static-WP-bigram" else None
 
     for persona in personas:
         # Baseline 6 is personalised: cell ranking is "initialised per persona from
-        # that persona's training-split utterances" (Sec. 4.3).
+        # that persona's training-split utterances" (Sec. 4.4).
         ranker = global_ranker
         if name == "Adaptive-grid":
             ranker = AdaptiveFrequencyRanker(_persona_training_text(persona))
@@ -277,7 +281,7 @@ def run_keystroke_baseline(
             n = len(turns)
             per_seed.append(
                 {
-                    # Table 7 marks SACT "n/r" for the two character-level
+                    # Table 6 marks SACT "n/r" for the two character-level
                     # baselines; only the symbol-level grid reports it.
                     "sact": presses / n if name == "TouchChat" else float("nan"),
                     "wpm": words / (seconds / 60.0) if seconds > 0 else float("nan"),
@@ -295,7 +299,7 @@ def run_keystroke_baseline(
 
 
 def _persona_training_text(persona) -> List[str]:
-    """That persona's own training-split utterances (Sec. 4.3 baseline 6).
+    """That persona's own training-split utterances (Sec. 4.4 baseline 6).
 
     Drawn from the disjoint training seeds used by stage 3, never from the
     evaluation sessions.
@@ -309,7 +313,7 @@ def _persona_training_text(persona) -> List[str]:
 
 
 # --------------------------------------------------------------------------- #
-# Non-LLM intent classifier (Sec. 4.3 item 7)
+# Non-LLM intent classifier (Sec. 4.4 item 7)
 # --------------------------------------------------------------------------- #
 @torch.no_grad()
 def run_intent_classifier(
@@ -319,7 +323,7 @@ def run_intent_classifier(
     seeds: Sequence[int],
     device: Optional[torch.device] = None,
 ) -> SystemResult:
-    """Intent selection with no generative component (Sec. 4.3)."""
+    """Intent selection with no generative component (Sec. 4.4)."""
     from ..data.taxonomy import PRAGMATIC_FUNCTIONS
 
     device = device or torch.device("cpu")

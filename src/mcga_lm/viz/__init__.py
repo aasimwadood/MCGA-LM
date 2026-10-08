@@ -1,4 +1,4 @@
-"""Figure reproduction (paper Figs. 2-6)."""
+"""Figure reproduction (paper Figs. 2-5, and the latency breakdown of Table 5)."""
 
 from .figures import (
     bootstrap_ci,

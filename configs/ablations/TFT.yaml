@@ -1,4 +1,4 @@
-# Sec. 4.4 ablation \TFT. Otherwise configs/default.yaml.
+# Sec. 4.5 ablation \TFT. Otherwise configs/default.yaml.
 
 name: ablation-TFT
 seed: 1234
@@ -15,7 +15,7 @@ inputs:
   env_partner_classes: 8
   env_scalars: 3
   ling_tokens: 10
-  ling_dim: 4096
+  ling_dim: 256
 perceiver:
   num_latents: 256
   latent_dim: 512
@@ -49,7 +49,7 @@ graph:
   dropout: 0.1
   enabled: true
 llm:
-  backend: hf
+  backend: template
   model_name: meta-llama/Meta-Llama-3-8B-Instruct
   quantisation: nf4
   lora_rank: 16

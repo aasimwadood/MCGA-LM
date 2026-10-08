@@ -2,7 +2,7 @@
 
 Paper Sec. 3.5 (per-user LoRA on accepted utterances), Sec. 3.6 (the 24-hour
 on-device queue; Eq. 8 through the LoRA modules), Sec. 3.2 / Eq. 11 (x_ling and
-z_utt from the LLM), Sec. 3.7 (two pre-training stages), Sec. 4.8 (3 epochs per
+z_utt from the LLM), Sec. 3.7 (two pre-training stages), Sec. 4.9 (3 epochs per
 user).
 
 The HF tests build a tiny randomly initialised LLaMA and a word-level tokeniser

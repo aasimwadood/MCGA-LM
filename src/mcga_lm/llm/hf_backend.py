@@ -1,6 +1,6 @@
-"""The paper's language model: LLaMA-3-8B-Instruct, 4-bit NF4, LoRA (Table 3).
+"""The paper's language model: LLaMA-3-8B-Instruct, 4-bit NF4, LoRA (Table 2).
 
-Sec. 3.5 / Table 3: r = 16, alpha = 32 on the attention matrices and feed-forward
+Sec. 3.5 / Table 2: r = 16, alpha = 32 on the attention matrices and feed-forward
 gates, quantised to 4-bit NF4 for on-device inference.
 
 Requires a CUDA GPU -- bitsandbytes NF4 has no Apple Silicon or CPU backend -- and
@@ -25,9 +25,9 @@ from .prompt import StructuredPrompt
 
 
 class HFLanguageBackend:
-    """4-bit quantised causal LM with LoRA adapters (Table 3: r = 16, alpha = 32).
+    """4-bit quantised causal LM with LoRA adapters (Table 2: r = 16, alpha = 32).
 
-    One LoRA adapter per user (Sec. 3.5, 4.8), each created as a copy of the
+    One LoRA adapter per user (Sec. 3.5, 4.9), each created as a copy of the
     shared ``base_adapter``. ``model``/``tokenizer`` may be passed in directly,
     which skips loading from the Hub (used by the tests with a tiny model).
     """
@@ -64,13 +64,13 @@ class HFLanguageBackend:
             return
 
         quant_config = None
-        if cfg.quantisation == "nf4":  # Table 3
+        if cfg.quantisation == "nf4":  # Table 2
             # bitsandbytes NF4 is CUDA-only. On Apple Silicon or CPU the import
             # succeeds and the failure surfaces much later as an opaque kernel
             # error, so check here and say what is actually wrong.
             if not torch.cuda.is_available():
                 raise RuntimeError(
-                    "quantisation='nf4' (Table 3) needs a CUDA GPU: bitsandbytes has no "
+                    "quantisation='nf4' (Table 2) needs a CUDA GPU: bitsandbytes has no "
                     "Apple Silicon or CPU backend. Either run on CUDA, or set "
                     "llm.quantisation='none' to load in bf16 -- which needs ~16 GB and is "
                     "no longer the paper's deployed configuration, so say so in any result."
@@ -84,7 +84,7 @@ class HFLanguageBackend:
             )
         elif cfg.quantisation not in ("none", "", None):
             raise ValueError(
-                f"unknown quantisation {cfg.quantisation!r}; expected 'nf4' (Table 3) or 'none'"
+                f"unknown quantisation {cfg.quantisation!r}; expected 'nf4' (Table 2) or 'none'"
             )
         self.model = AutoModelForCausalLM.from_pretrained(
             cfg.model_name, quantization_config=quant_config, device_map="auto"
@@ -392,7 +392,7 @@ def classify_function(utterance: str, node_types: Sequence[str] = ()) -> str:
 
 
 def attach_lora_adapters(model, cfg: LLMConfig):
-    """LoRA per Sec. 3.5 / Table 3: r = 16, alpha = 32, attention + FF gates.
+    """LoRA per Sec. 3.5 / Table 2: r = 16, alpha = 32, attention + FF gates.
 
     "Only these adapters (~0.1% of parameters) are updated."
     """

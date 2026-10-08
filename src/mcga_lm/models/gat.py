@@ -1,7 +1,7 @@
 """Phase III: intent activation via graph attention (paper Sec. 3.4, Eqs. 6-7).
 
 A query-conditioned multi-head GAT attends over the personal intent graph and
-selects the Active Intent Sub-graph -- the top K_top = 5 nodes (Table 3).
+selects the Active Intent Sub-graph -- the top K_top = 5 nodes (Table 2).
 
 Two readings of the printed equations are implemented, both selectable:
 

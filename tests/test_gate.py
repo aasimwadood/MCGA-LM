@@ -18,7 +18,7 @@ def test_decision_rule_is_strictly_below_tau() -> None:
 
 
 def test_disabled_gate_presents_everything() -> None:
-    """Ablation "\\ Bayesian Gate" (Sec. 4.4)."""
+    """Ablation "\\ Bayesian Gate" (Sec. 4.5)."""
     gate = BayesianGate(SafetyConfig(enabled=False), tau=0.01)
     assert gate.decide(10.0).accept is True
 
@@ -97,7 +97,7 @@ def test_defaults_are_the_printed_rules_of_section_3_6() -> None:
     cfg = SafetyConfig()
     assert cfg.decision_rule == "variance_only"
     assert cfg.tau_rule == "smallest"
-    assert cfg.mc_dropout_site == "scoring_head"  # Table 6 / Sec. 4.10; see ERRATA E-12
+    assert cfg.mc_dropout_site == "scoring_head"  # Table 5 / Sec. 4.10; see ERRATA E-12
 
 
 def test_unknown_tau_rule_is_rejected() -> None:

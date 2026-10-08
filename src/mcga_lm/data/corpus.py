@@ -76,7 +76,7 @@ class AACIntentCorpus:
 
 
 def realise_reference(function: str, entity: str, rng: Optional[np.random.Generator] = None) -> str:
-    """Produce a reference utterance for BLEU-4 / ROUGE-L scoring (Sec. 4.2)."""
+    """Produce a reference utterance for BLEU-4 / ROUGE-L scoring (Sec. 4.3)."""
     forms = REFERENCE_TEMPLATES[function]
     idx = 0 if rng is None else int(rng.integers(len(forms)))
     text = forms[idx].format(slot=entity)

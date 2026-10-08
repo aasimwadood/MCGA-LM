@@ -1,34 +1,36 @@
-"""Statistical analysis plan (paper Sec. 4.7).
+"""Statistical analysis plan (paper Sec. 4.8).
 
   * repeated-measures ANOVA with persona as random effect, Mauchly's test for
     sphericity and Greenhouse-Geisser correction where needed
-  * Cohen's d_s and the paired d_z, with 95% bootstrap percentile intervals
-  * aligned rank transform (ART) + pairwise Wilcoxon for non-normal metrics
+  * Cohen's d_s, recomputable from Table 6 (and the paired d_z, for ERRATA E-1)
+  * aligned rank transform (ART) + pairwise Wilcoxon for hallucination rate and
+    intent hit rate
+  * calibration curves compared by KL divergence from the diagonal, and ECE
+    differences by bootstrap resampling, 10,000 iterations
+  * post-hoc paired t-tests behind Table 7's significance markers
   * Holm-Bonferroni correction within each metric family
-  * bootstrap resampling, 10,000 iterations
 
-DEVIATION. The manuscript attributed its ANOVA and p-values to R 4.3.1 with afex
-1.3-0 and emmeans 1.8.9, but no script or per-persona data for that analysis has
-been found, and the revision withdraws them (ERRATA.md, E-1). This is a NumPy/SciPy
-implementation of the original plan, so the repository has no R dependency. The
-formulas are standard and unit-tested, but they have never been run on the
-paper's data and reproduce none of its inferential statistics.
+:func:`analysis_plan` runs all of it on per-persona scores.
 
-The only statistic the revised paper keeps is d_s computed from Table 7's means
-and SDs, which :func:`cohens_ds_from_summary` reproduces.
+DEVIATION. Sec. 4.8 says the analyses were run in Python with Pingouin (the
+original manuscript said R 4.3.1 with afex and emmeans). This is a NumPy/SciPy
+implementation of the same plan, so the repository depends on neither. The
+formulas are standard and unit-tested, but no script or per-persona data behind
+the paper's own ANOVA and p-values has been published (ERRATA.md, E-1), so none
+of its printed inferential statistics can be checked against this code.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Dict, List, Mapping, Sequence, Tuple
+from typing import Dict, List, Mapping, Optional, Sequence, Tuple
 
 import numpy as np
 
 
 # ------------------------------------------------------------ effect size -- #
 def cohens_ds(x1: Sequence[float], x2: Sequence[float]) -> float:
-    """Cohen's d_s (Sec. 4.7): pooled *within-condition* SD, not the SD of the
+    """Cohen's d_s (Sec. 4.8): pooled *within-condition* SD, not the SD of the
     difference scores. Reproducible directly from a table of means and SDs."""
     a = np.asarray(x1, dtype=float)
     b = np.asarray(x2, dtype=float)
@@ -112,7 +114,7 @@ class ANOVAResult:
 
 
 def repeated_measures_anova(data: np.ndarray, alpha_sphericity: float = 0.05) -> ANOVAResult:
-    """One-way repeated-measures ANOVA (Sec. 4.7).
+    """One-way repeated-measures ANOVA (Sec. 4.8).
 
     ``data``: (n_subjects, n_conditions) -- personas x systems in this paper.
     Applies the Greenhouse-Geisser correction when Mauchly's test rejects.
@@ -180,7 +182,7 @@ def _mauchly_and_gg(x: np.ndarray) -> Tuple[float, float, float]:
 
 # ------------------------------------------------------- non-parametric -- #
 def aligned_rank_transform(data: np.ndarray) -> np.ndarray:
-    """ART for a one-way repeated-measures design (Sec. 4.7).
+    """ART for a one-way repeated-measures design (Sec. 4.8).
 
     Aligns each cell by removing all effects but the condition effect, then
     ranks globally. ``data``: (n_subjects, n_conditions).
@@ -200,7 +202,7 @@ def aligned_rank_transform(data: np.ndarray) -> np.ndarray:
 def pairwise_wilcoxon(
     data: np.ndarray, labels: Sequence[str], reference: int = 0
 ) -> List[Dict[str, float]]:
-    """Wilcoxon signed-rank tests against a reference condition (Sec. 4.7)."""
+    """Wilcoxon signed-rank tests against a reference condition (Sec. 4.8)."""
     from scipy import stats
 
     x = np.asarray(data, dtype=float)
@@ -216,6 +218,7 @@ def pairwise_wilcoxon(
         out.append(
             {
                 "comparison": f"{labels[reference]} vs {labels[j]}",
+                "system": labels[j],
                 "statistic": float(stat),
                 "p": float(p),
                 "d_s": cohens_ds(x[:, reference], x[:, j]),
@@ -225,8 +228,7 @@ def pairwise_wilcoxon(
 
 
 def paired_t_tests(data: np.ndarray, labels: Sequence[str], reference: int = 0) -> List[Dict[str, float]]:
-    """Post-hoc paired t-tests (the original Table 8's significance markers,
-    withdrawn in the revision -- ERRATA E-1)."""
+    """Post-hoc paired t-tests, the source of Table 7's significance markers (Sec. 4.8)."""
     from scipy import stats
 
     x = np.asarray(data, dtype=float)
@@ -238,6 +240,7 @@ def paired_t_tests(data: np.ndarray, labels: Sequence[str], reference: int = 0) 
         out.append(
             {
                 "comparison": f"{labels[reference]} vs {labels[j]}",
+                "system": labels[j],
                 "statistic": float(t),
                 "p": float(p),
                 "d_s": cohens_ds(x[:, reference], x[:, j]),
@@ -248,7 +251,7 @@ def paired_t_tests(data: np.ndarray, labels: Sequence[str], reference: int = 0) 
 
 # ------------------------------------------------------------ correction -- #
 def holm_bonferroni(p_values: Sequence[float], alpha: float = 0.05) -> Dict[str, list]:
-    """Holm-Bonferroni step-down correction within a metric family (Sec. 4.7)."""
+    """Holm-Bonferroni step-down correction within a metric family (Sec. 4.8)."""
     p = np.asarray(p_values, dtype=float)
     m = p.size
     order = np.argsort(p)
@@ -265,7 +268,7 @@ def holm_bonferroni(p_values: Sequence[float], alpha: float = 0.05) -> Dict[str,
 
 
 def stars(p: float) -> str:
-    """Significance markers as printed in Tables 7-8."""
+    """Significance markers as printed in Table 7."""
     if not np.isfinite(p):
         return ""
     if p < 0.001:
@@ -284,30 +287,64 @@ def bootstrap_difference(
     n_iter: int = 10_000,
     seed: int = 0,
     statistic=np.mean,
+    paired: bool = False,
 ) -> Dict[str, float]:
-    """Bootstrap CI for a difference of statistics (Sec. 4.7, 10,000 iterations)."""
+    """Bootstrap CI for a difference of statistics (Sec. 4.8, 10,000 iterations).
+
+    ``paired=True`` resamples personas rather than values, taking the same
+    personas from both conditions, as :func:`bootstrap_effect_size` does.
+
+    The two-sided p counts the observed sample among the resamples,
+    ``(k + 1) / (n_iter + 1)`` per tail, so it is never exactly zero: with
+    10,000 resamples the smallest reportable p is about 2e-4.
+    """
     rng = np.random.default_rng(seed)
     x = np.asarray(a, dtype=float)
     y = np.asarray(b, dtype=float)
+    if paired and x.size != y.size:
+        raise ValueError("paired bootstrap needs equally sized, persona-aligned samples")
     observed = float(statistic(x) - statistic(y))
     draws = np.empty(n_iter, dtype=float)
     for i in range(n_iter):
-        draws[i] = statistic(rng.choice(x, x.size, replace=True)) - statistic(
-            rng.choice(y, y.size, replace=True)
-        )
+        if paired:
+            idx = rng.integers(0, x.size, x.size)
+            draws[i] = statistic(x[idx]) - statistic(y[idx])
+        else:
+            draws[i] = statistic(rng.choice(x, x.size, replace=True)) - statistic(
+                rng.choice(y, y.size, replace=True)
+            )
     return {
         "observed": observed,
         "ci_low": float(np.percentile(draws, 2.5)),
         "ci_high": float(np.percentile(draws, 97.5)),
-        "p_two_sided": float(2 * min((draws <= 0).mean(), (draws >= 0).mean())),
+        "p_two_sided": float(
+            min(1.0, 2 * min((draws <= 0).sum() + 1, (draws >= 0).sum() + 1) / (n_iter + 1))
+        ),
     }
 
 
-def kl_from_diagonal(confidence: Sequence[float], accuracy: Sequence[float], eps: float = 1e-9) -> float:
-    """KL divergence of a calibration curve from perfect calibration (Sec. 4.7)."""
+def kl_from_diagonal(
+    confidence: Sequence[float],
+    accuracy: Sequence[float],
+    eps: float = 1e-9,
+    weights: Optional[Sequence[float]] = None,
+) -> float:
+    """KL divergence of a calibration curve from perfect calibration (Sec. 4.8).
+
+    Each bin contributes the Bernoulli KL between its accuracy and its mean
+    confidence. The paper does not say how bins are weighted: without
+    ``weights`` they are summed; pass the bin counts to weight each by its share
+    of turns, as ECE does, so a one-turn bin cannot dominate.
+    """
     c = np.clip(np.asarray(confidence, dtype=float), eps, 1 - eps)
     a = np.clip(np.asarray(accuracy, dtype=float), eps, 1 - eps)
-    return float(np.sum(a * np.log(a / c) + (1 - a) * np.log((1 - a) / (1 - c))))
+    if c.size == 0:
+        return float("nan")
+    per_bin = a * np.log(a / c) + (1 - a) * np.log((1 - a) / (1 - c))
+    if weights is None:
+        return float(np.sum(per_bin))
+    w = np.asarray(weights, dtype=float)
+    return float(np.sum(per_bin * w) / w.sum()) if w.sum() > 0 else float("nan")
 
 
 def post_hoc_power(effect_f: float, n: int, k: int, alpha: float = 0.05, rho: float = 0.0) -> float:
@@ -382,3 +419,114 @@ def format_effect_size(result: Mapping[str, float], nd: int = 2) -> str:
         if np.isfinite(result.get("ci_low", np.nan))
         else f"{result['d_s']:.{nd}f}"
     )
+
+
+# --------------------------------------------------------- analysis plan -- #
+# Table 7's columns, each tested against MCGA-LM with a post-hoc paired t-test.
+TABLE_7_METRICS = ("ihr@1", "ihr@5", "bleu4", "rouge_l", "ece")
+# "Non-normally distributed metrics (hallucination rate, intent hit rate)":
+# Table 6's Hal. and IHR@3 columns.
+NONPARAMETRIC_METRICS = ("hallucination_hard", "ihr@3")
+
+
+def analysis_plan(
+    sact: Mapping[str, Sequence[float]],
+    metrics: Mapping[str, Mapping[str, Sequence[float]]],
+    reference: str = "MCGA-LM",
+    n_iter: int = 10_000,
+    alpha: float = 0.05,
+    seed: int = 0,
+) -> Dict:
+    """Run the Sec. 4.8 plan on per-persona scores.
+
+    ``sact`` maps each system in the SACT ANOVA to its per-persona SACT, and
+    ``metrics`` maps each generative system to its per-persona metric columns.
+    Columns must be persona-aligned; a system missing a metric, or with a
+    non-finite value for any persona, is left out of that metric's tests. Every
+    contrast is against ``reference``, and Holm-Bonferroni runs within each
+    metric family.
+
+    * SACT: repeated-measures ANOVA, then post-hoc paired t-tests.
+    * Hallucination rate and IHR@3: ART, an ANOVA on the aligned ranks, then
+      pairwise Wilcoxon tests.
+    * Table 7's metrics: post-hoc paired t-tests, whose stars are its superscripts.
+    * Calibration: each system's KL divergence from the diagonal
+      (``calibration_kl``), and paired bootstrap intervals for its ECE difference.
+    """
+    out: Dict = {}
+    names, x = _aligned(sact, reference)
+    if names:
+        ref = names.index(reference)
+        out["sact_anova"] = {"systems": names, **repeated_measures_anova(x).as_dict()}
+        out["sact_pairwise"] = _holm(paired_t_tests(x, names, ref), alpha)
+
+    out["nonparametric"] = {}
+    for metric in NONPARAMETRIC_METRICS:
+        names, x = _aligned(_metric(metrics, metric), reference)
+        if not names:
+            continue
+        ranks = aligned_rank_transform(x)
+        out["nonparametric"][metric] = {
+            "systems": names,
+            "art_anova": repeated_measures_anova(ranks).as_dict(),
+            "art_rank_means": ranks.mean(axis=0).tolist(),
+            "pairwise_wilcoxon": _holm(pairwise_wilcoxon(x, names, names.index(reference)), alpha),
+        }
+
+    out["table_7"] = {}
+    for metric in TABLE_7_METRICS:
+        names, x = _aligned(_metric(metrics, metric), reference)
+        if names:
+            out["table_7"][metric] = _holm(paired_t_tests(x, names, names.index(reference)), alpha)
+
+    out["calibration"] = {}
+    names, x = _aligned(_metric(metrics, "calibration_kl"), reference)
+    if names:
+        out["calibration"]["kl_from_diagonal"] = {
+            name: {"mean": float(x[:, j].mean()), "sd": float(x[:, j].std(ddof=1))}
+            for j, name in enumerate(names)
+        }
+    names, x = _aligned(_metric(metrics, "ece"), reference)
+    if names:
+        ref = names.index(reference)
+        differences = []
+        for j, name in enumerate(names):
+            if j == ref:
+                continue
+            boot = bootstrap_difference(x[:, ref], x[:, j], n_iter=n_iter, seed=seed, paired=True)
+            differences.append(
+                {
+                    "comparison": f"{reference} vs {name}",
+                    "system": name,
+                    "ece_difference": boot["observed"],
+                    "ci_low": boot["ci_low"],
+                    "ci_high": boot["ci_high"],
+                    "p": boot["p_two_sided"],
+                }
+            )
+        out["calibration"]["ece_bootstrap"] = _holm(differences, alpha)
+    return out
+
+
+def _metric(metrics: Mapping[str, Mapping[str, Sequence[float]]], metric: str) -> Dict[str, Sequence[float]]:
+    return {system: cols[metric] for system, cols in metrics.items() if metric in cols}
+
+
+def _aligned(columns: Mapping[str, Sequence[float]], reference: str) -> Tuple[List[str], np.ndarray]:
+    """Systems with a finite score for every persona, stacked as (personas, systems)."""
+    names = [n for n, col in columns.items() if np.isfinite(np.asarray(col, dtype=float)).all()]
+    if reference not in names or len(names) < 2:
+        return [], np.empty((0, 0))
+    return names, np.stack([np.asarray(columns[n], dtype=float) for n in names], axis=1)
+
+
+def _holm(tests: List[Dict[str, float]], alpha: float) -> List[Dict[str, float]]:
+    """Holm-correct one metric family in place. A test whose p is undefined (zero
+    variance in the differences) stays undefined rather than inheriting a neighbour's."""
+    finite = [i for i, t in enumerate(tests) if np.isfinite(t["p"])]
+    adjusted = holm_bonferroni([tests[i]["p"] for i in finite], alpha=alpha)
+    for t in tests:
+        t.update(p_holm=float("nan"), significant=False, stars="")
+    for i, p_adj, reject in zip(finite, adjusted["p_adjusted"], adjusted["reject"]):
+        tests[i].update(p_holm=p_adj, significant=bool(reject), stars=stars(p_adj))
+    return tests

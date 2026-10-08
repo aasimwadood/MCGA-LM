@@ -16,8 +16,8 @@ printed text has known defects (both documented in ERRATA.md):
 * Gating on variance alone cannot bound FAR. Predictive variance measures whether
   the MC-Dropout samples agree with *each other*, not whether they are right, so a
   scoring head that is uniformly confident and uniformly wrong passes every tau in
-  the grid -- the exact failure Table 2 names as the reason to distrust a plain
-  LLM. ``decision_rule="guarded"`` additionally requires a calibrated confidence
+  the grid -- the confidently wrong output that is the reason to gate an LLM at
+  all. ``decision_rule="guarded"`` additionally requires a calibrated confidence
   floor; the default ``"variance_only"`` is Sec. 3.6's rule.
 """
 
@@ -96,7 +96,7 @@ class BayesianGate:
         are right" from "the samples agree and are wrong".
         """
         if not self.cfg.enabled:
-            # Ablation "\ Bayesian Gate" (Sec. 4.4): present everything.
+            # Ablation "\ Bayesian Gate" (Sec. 4.5): present everything.
             return GateDecision(True, float(variance), self.tau, confidence, "gate disabled")
 
         v, c = float(variance), float(confidence)

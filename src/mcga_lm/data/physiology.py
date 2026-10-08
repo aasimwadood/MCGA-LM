@@ -1,6 +1,6 @@
-"""Synthetic physiological streams and the fatigue model (paper Sec. 4.5, 5.5).
+"""Synthetic physiological streams and the fatigue model (paper Sec. 4.6, 5.5).
 
-Sec. 4.5 simulates 60-minute conversations with fatigue modelled as an
+Sec. 4.6 simulates 60-minute conversations with fatigue modelled as an
 exponential rise in cognitive load, based on published HRV/EDA decay curves.
 Sec. 5.5 varies the half-life over 15-60 min and the peak factor over 0.5-0.9.
 
@@ -23,7 +23,7 @@ from ..config import InputDims
 
 @dataclass
 class FatigueModel:
-    """Exponential rise in cognitive load over a session (Sec. 4.5)."""
+    """Exponential rise in cognitive load over a session (Sec. 4.6)."""
 
     half_life_min: float = 30.0
     peak: float = 0.8
@@ -40,9 +40,9 @@ class FatigueModel:
         return np.clip(f, 0.0, 1.0)
 
     def adapted_value(self, minutes, rng=None, relief: float = 0.25, onset_min: float = 20.0):
-        """Fatigue trajectory under TFT-driven adaptation (Fig. 5).
+        """Fatigue trajectory under TFT-driven adaptation (Fig. 4).
 
-        Once adaptation activates (the paper's Fig. 5 marks an activation point),
+        Once adaptation activates (the paper's Fig. 4 marks an activation point),
         the effort per turn falls, so the accumulated fatigue rises more slowly.
         ASSUMPTION A-15: modelled as a multiplicative relief on the increment
         past ``onset_min``.
@@ -75,7 +75,7 @@ class PhysiologySynthesiser:
         from ..privacy import SensorSwitchboard
 
         self.dims = dims
-        # Sec. 4.6 / 5.6: consumer configuration is EDA + PPG + monocular gaze,
+        # Sec. 4.7 / 5.6: consumer configuration is EDA + PPG + monocular gaze,
         # i.e. EEG channels are unavailable. That is the same thing as Sec. 3.9's
         # worked example of a user switching EEG off, so both go through one
         # mechanism: the switchboard. ``reduced_sensor_set=True`` is shorthand
@@ -86,7 +86,7 @@ class PhysiologySynthesiser:
                 SensorSwitchboard.reduced_consumer_set() if reduced_sensor_set else SensorSwitchboard()
             )
         self.switchboard = switchboard
-        self.monocular_gaze = reduced_sensor_set  # Table 5: webcam gaze is monocular
+        self.monocular_gaze = reduced_sensor_set  # Sec. 4.7: webcam gaze is monocular
 
     def physiology(self, fatigue: float, arousal: float, rng: np.random.Generator) -> np.ndarray:
         d = self.dims

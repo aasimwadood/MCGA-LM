@@ -53,7 +53,7 @@ class TurnContext:
     partner_role: str
     time_of_day: float  # fraction of a day in [0, 1)
     noise_db: float
-    fatigue: float  # ground-truth fatigue index (Sec. 4.5)
+    fatigue: float  # ground-truth fatigue index (Sec. 4.6)
     arousal: float
 
 
@@ -134,7 +134,7 @@ class Persona:
         fatigue_peak: Optional[float] = None,
         adapted: bool = False,
     ) -> List[PersonaTurn]:
-        """Simulate one 60-minute conversation (Sec. 4.5)."""
+        """Simulate one 60-minute conversation (Sec. 4.6)."""
         from .physiology import FatigueModel
 
         rng = np.random.default_rng((self.seed * 100003 + seed) % (2**32))

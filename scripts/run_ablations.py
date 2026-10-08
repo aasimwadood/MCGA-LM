@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Ablation study (paper Sec. 4.4, Fig. 4).
+"""Ablation study (paper Sec. 4.5, Fig. 3).
 
     python scripts/run_ablations.py --out runs/
     python scripts/run_ablations.py --out runs/ --full-factorial
 
-Sec. 4.4 opens by calling its ablation "full-factorial" and then describes
+Sec. 4.5 opens by calling its ablation "full-factorial" and then describes
 "removing one component at a time". Those are different designs: one-at-a-time
-gives k+1 conditions, full-factorial gives 2^k. Fig. 4's five bars show the
+gives k+1 conditions, full-factorial gives 2^k. Fig. 3's five bars show the
 one-at-a-time version, which is the default here.
 
 ``--full-factorial`` runs all 32 cells, which is the only way to answer the
@@ -30,7 +30,7 @@ def main() -> None:
     parser.add_argument("--quick", action="store_true")
     parser.add_argument("--per-persona", action="store_true",
                         help="fit a separate encoder/GAT per persona (not in the paper)")
-    parser.add_argument("--fatigued", action="store_true", help="evaluate under induced fatigue (Sec. 4.5)")
+    parser.add_argument("--fatigued", action="store_true", help="evaluate under induced fatigue (Sec. 4.6)")
     parser.add_argument("--full-factorial", action="store_true",
                         help="run all 2^k cells rather than one-at-a-time (D-10)")
     args = parser.parse_args()
@@ -53,11 +53,11 @@ def main() -> None:
     target = out_dir(cfg, "ablations")
 
     if args.full_factorial:
-        banner("Full-factorial ablation, all 2^k cells (paper Sec. 4.4, first sentence)")
+        banner("Full-factorial ablation, all 2^k cells (paper Sec. 4.5, first sentence)")
         variants = full_factorial_design()
-        print(f"{len(variants)} conditions; Fig. 4 reports {len(ABLATION_ORDER)} of them\n")
+        print(f"{len(variants)} conditions; Fig. 3 reports {len(ABLATION_ORDER)} of them\n")
     else:
-        banner("Ablation study, one component at a time (paper Sec. 4.4, Fig. 4)")
+        banner("Ablation study, one component at a time (paper Sec. 4.5, Fig. 3)")
         variants = [get_variant(n) for n in ABLATION_ORDER]
 
     table: Dict[str, dict] = {}
@@ -73,7 +73,7 @@ def main() -> None:
         res, _ = R.run_generative_system(
             name, vcfg, model, backend, personas, seeds,
             taus=report.tau_by_persona, floors=report.floor_by_persona, device=device,
-            # Sec. 4.4: the TFT ablation is the one that must be probed under
+            # Sec. 4.5: the TFT ablation is the one that must be probed under
             # induced fatigue, since it "has little effect when rested".
             adapted_fatigue=not args.fatigued,
         )
@@ -90,7 +90,7 @@ def main() -> None:
                "provenance": provenance_note(), "ablations": table},
               target / ("ablations_factorial.json" if args.full_factorial else "ablations.json"))
 
-    # Fig. 4 plots the one-at-a-time conditions; under --full-factorial those are
+    # Fig. 3 plots the one-at-a-time conditions; under --full-factorial those are
     # the single-factor cells, which are a subset of what was just run.
     plotted = [n for n in ABLATION_ORDER if n in table]
     if len(plotted) == len(ABLATION_ORDER):
@@ -100,7 +100,7 @@ def main() -> None:
             [table[n]["sact"]["sd"] for n in plotted],
             [table[n]["hallucination_hard"]["mean"] for n in plotted],
             [table[n]["hallucination_hard"]["sd"] for n in plotted],
-            target / "fig4_ablation.png",
+            target / "fig3_ablation.png",
         )
     print(f"\nwritten to {target}")
 

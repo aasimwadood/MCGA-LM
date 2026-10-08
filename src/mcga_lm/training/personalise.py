@@ -7,7 +7,7 @@ on-device throughout the product lifetime.
 This stage fits the Perceiver/TFT/GAT against Eq. (9), trains the intent-scoring
 head, calibrates tau per persona against the 5% false-acceptance budget of
 Sec. 3.6, and then fine-tunes each persona's own LoRA adapter on the utterances
-that persona accepted (Sec. 3.5; 3 epochs per user, Sec. 4.8). Calibration comes
+that persona accepted (Sec. 3.5; 3 epochs per user, Sec. 4.9). Calibration comes
 first because Sec. 3.6 places it in "the initial 30-minute session", before any
 LoRA update has left the 24-hour queue.
 
@@ -483,10 +483,10 @@ def _personalise_adapters(
     accepted_pairs: Mapping[str, Sequence[Tuple[str, str]]],
     cfg: Config,
 ) -> Dict[str, dict]:
-    """Fit each persona's LoRA adapter on its accepted utterances (Sec. 3.5, 4.8).
+    """Fit each persona's LoRA adapter on its accepted utterances (Sec. 3.5, 4.9).
 
-    Sec. 4.8: "LoRA fine-tuning converges in 3 epochs per user". The paper gives
-    no LoRA learning rate, so its only stated rate (Sec. 4.8, 1e-4) is used.
+    Sec. 4.9: "LoRA fine-tuning converges in 3 epochs per user". The paper gives
+    no LoRA learning rate, so its only stated rate (Sec. 4.9, 1e-4) is used.
     """
     reports: Dict[str, dict] = {}
     for persona in personas:

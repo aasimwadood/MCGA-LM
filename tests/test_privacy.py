@@ -91,7 +91,7 @@ def test_re_enabling_a_sensor_clears_its_warning() -> None:
 
 
 def test_reduced_consumer_set_is_the_eeg_off_switchboard() -> None:
-    """Table 5's consumer config and Sec. 3.9's example are the same state."""
+    """Sec. 4.7's consumer config and Sec. 3.9's example are the same state."""
     reduced = SensorSwitchboard.reduced_consumer_set()
     assert not reduced.enabled("eeg")
     assert all(reduced.enabled(s) for s in SENSORS if s != "eeg")

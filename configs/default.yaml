@@ -1,9 +1,10 @@
-# The paper's configuration: Table 3 hyperparameters, LLaMA-3-8B-Instruct in
-# 4-bit NF4 with per-user LoRA (r=16, alpha=32), and the printed rules of
-# Sec. 3.4 (Eq. 7) and Sec. 3.6 (variance-only gate, smallest feasible tau).
-# Needs a CUDA GPU, gated weights and the optional extras:
-#   pip install -e '.[llm]' && huggingface-cli login
-# configs/cpu.yaml runs the same pipeline on CPU with the template backend.
+# The default configuration: Table 2 hyperparameters and the printed rules of
+# Sec. 3.4 (Eq. 7) and Sec. 3.6 (variance-only gate, smallest feasible tau), with
+# the weight-free template realiser as the language backend, as the paper's Data
+# and Code Availability statement describes. Runs on CPU with no downloads. The
+# template backend is not a language model and has no LoRA adapters, so per-user
+# LoRA fine-tuning is reported as skipped. configs/llm_hf.yaml is the
+# LLaMA-3-8B-Instruct configuration.
 
 name: mcga-lm
 seed: 1234
@@ -20,7 +21,7 @@ inputs:
   env_partner_classes: 8
   env_scalars: 3
   ling_tokens: 10
-  ling_dim: 4096
+  ling_dim: 256
 perceiver:
   num_latents: 256
   latent_dim: 512
@@ -54,7 +55,7 @@ graph:
   dropout: 0.1
   enabled: true
 llm:
-  backend: hf
+  backend: template
   model_name: meta-llama/Meta-Llama-3-8B-Instruct
   quantisation: nf4
   lora_rank: 16

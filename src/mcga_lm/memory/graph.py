@@ -4,7 +4,7 @@ A directed multigraph G = (V, E, R) stored on-device and updated from accepted
 utterances:
 
   * nodes in four categories -- Person, Object, Activity, AbstractState -- each
-    initialised with a 300-dimensional embedding (Table 3);
+    initialised with a 300-dimensional embedding (Table 2);
   * six typed relations: interacts_with, located_in, causes, associated_with,
     precedes, expressed_as;
   * edge weights in [0, 1] decaying with a 30-day half-life unless reinforced,

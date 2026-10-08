@@ -1,10 +1,10 @@
-"""Phase I: multimodal contextual grounding (paper Sec. 3.2, Eqs. 2-4; Table 3).
+"""Phase I: multimodal contextual grounding (paper Sec. 3.2, Eqs. 2-4; Table 2).
 
 A Perceiver IO encoder compresses the asynchronous input set X_t of Eq. (2) --
 EEG/HRV/EDA, gaze, environment and dialogue history -- into a fixed M x D latent
-array (Table 3: 256 x 512), then mean-pools it to the contextual embedding
+array (Table 2: 256 x 512), then mean-pools it to the contextual embedding
 z_ctx,t. Cost is independent of input length, which is what makes real-time
-operation on an edge device possible (Sec. 4.9).
+operation on an edge device possible (Sec. 4.10).
 """
 
 from __future__ import annotations
@@ -149,7 +149,7 @@ class PerceiverIOEncoder(nn.Module):
         token_dim = self.tokeniser.token_dim
 
         if cfg.use_cross_attention:
-            # Z in R^{M x D}, Table 3.
+            # Z in R^{M x D}, Table 2.
             self.latents = nn.Parameter(torch.randn(cfg.num_latents, cfg.latent_dim) * 0.02)
             self.cross_blocks = nn.ModuleList(
                 [
@@ -169,7 +169,7 @@ class PerceiverIOEncoder(nn.Module):
                 ]
             )
         else:
-            # Sec. 4.4 "\ cross-attention": early concatenation + linear projection.
+            # Sec. 4.5 "\ cross-attention": early concatenation + linear projection.
             self.early_proj = nn.Sequential(
                 nn.Linear(token_dim * self.tokeniser.num_tokens, cfg.latent_dim),
                 nn.GELU(),
@@ -202,7 +202,7 @@ class PerceiverIOEncoder(nn.Module):
 
 
 class LateFusionEncoder(nn.Module):
-    """Ablation "\\ Perceiver IO" (Sec. 4.4): per-modality MLP, concatenated.
+    """Ablation "\\ Perceiver IO" (Sec. 4.5): per-modality MLP, concatenated.
 
     Provides the same ``forward``/``encode_latents`` interface so the rest of the
     pipeline is unchanged.
@@ -245,7 +245,7 @@ class LateFusionEncoder(nn.Module):
 
 
 def build_context_encoder(dims: InputDims, cfg: PerceiverConfig, ablate_perceiver: bool = False):
-    """Factory honouring the Sec. 4.4 ablation switches."""
+    """Factory honouring the Sec. 4.5 ablation switches."""
     if ablate_perceiver:
         return LateFusionEncoder(dims, cfg)
     return PerceiverIOEncoder(dims, cfg)

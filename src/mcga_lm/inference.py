@@ -19,8 +19,8 @@ The bound on line 24 is architectural, and every exit path from ``run_turn``
 asserts it.
 
 Line 7 runs Eq. (8) wherever ``SafetyConfig.mc_dropout_site`` says: the
-intent-scoring head (default, Table 6) or the LLM's LoRA modules (Sec. 3.6); see
-ERRATA.md, E-12. Accepted utterances update the graph and, when a
+intent-scoring head (default, Sec. 3.6 and Table 5) or the LLM's LoRA modules
+(Sec. 3.6 before v3); see ERRATA.md, E-12. Accepted utterances update the graph and, when a
 :class:`~mcga_lm.training.lora.LoRAUpdateQueue` is attached, wait in the 24-hour
 queue before fine-tuning the user's LoRA adapter (Sec. 3.6).
 
@@ -59,7 +59,7 @@ if TYPE_CHECKING:  # training imports this module, so only for annotations
     from .training.lora import LoRAUpdateQueue
 
 # Depth of the ranked candidate list retained for IHR@K measurement
-# (Sec. 4.2 reports K = 1, 3, 5). Presentation is still capped at J_max.
+# (Sec. 4.3 reports K = 1, 3, 5). Presentation is still capped at J_max.
 RETRIEVAL_DEPTH = 5
 
 
@@ -68,7 +68,7 @@ class TurnResult:
     """Outcome of one communicative turn."""
 
     utterance: Optional[str]
-    sact: int  # a -- switch activations this turn (primary endpoint, Sec. 4.2)
+    sact: int  # a -- switch activations this turn (primary endpoint, Sec. 4.3)
     accepted: bool
     abstained: bool  # Algorithm 1 line 23
     clarification_rounds: int  # c
@@ -310,7 +310,7 @@ class AdaptiveCommunicator:
 
         # Line 6: the utterance is decoded ONCE (Sec. 3.6).
         # We decode a ranked list of RETRIEVAL_DEPTH candidates so IHR@1/3/5
-        # (Sec. 4.2) is measurable, but only ``n_offer`` of them are ever put in
+        # (Sec. 4.3) is measurable, but only ``n_offer`` of them are ever put in
         # front of the user -- that is what costs switch activations.
         t0 = time.perf_counter()
         candidates = self.backend.generate(
@@ -334,7 +334,7 @@ class AdaptiveCommunicator:
                 prompt_text, candidates[0].text, self.cfg.safety.mc_passes
             )
         else:
-            # Table 6 / Sec. 4.10: the intent-scoring head only.
+            # Table 5 / Sec. 4.10: the intent-scoring head only.
             context = self.model.scoring_context(
                 query_row, self._subgraph_features(node_features, active_ids)
             )
@@ -414,7 +414,7 @@ class AdaptiveCommunicator:
         graph.update_from_frame(frame)
 
     def _hit_rank(self, candidates: Sequence[GeneratedUtterance], turn: PersonaTurn) -> Optional[int]:
-        """Rank of the true intent among the candidates -- feeds IHR@K (Sec. 4.2)."""
+        """Rank of the true intent among the candidates -- feeds IHR@K (Sec. 4.3)."""
         truth = {e.lower() for e in turn.intent.entities}
         for i, cand in enumerate(candidates, start=1):
             if {e.lower() for e in cand.entities} & truth and cand.function == turn.intent.function:

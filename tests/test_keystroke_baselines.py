@@ -1,4 +1,4 @@
-"""Keystroke-level baselines (paper Sec. 4.3 items 1, 5, 6)."""
+"""Keystroke-level baselines (paper Sec. 4.4 items 1, 5, 6)."""
 
 from __future__ import annotations
 
@@ -40,7 +40,7 @@ def test_page_changes_add_cost() -> None:
 
 
 def test_grid_wpm_is_in_the_published_range() -> None:
-    """Sec. 4.3 validates the grid simulation against 10.5 +/- 2.1 WPM."""
+    """Sec. 4.4 validates the grid simulation against 10.5 +/- 2.1 WPM."""
     sim = GridScanningSimulator(KLMParams())
     rng = np.random.default_rng(0)
     rates = [sim.simulate_utterance(s, rng).wpm for s in SENTENCES[:60]]
@@ -62,7 +62,7 @@ def test_word_prediction_gives_kspc_below_two_presses_per_character() -> None:
 
 
 def test_personalised_ranking_beats_a_global_one_on_that_persons_own_text() -> None:
-    """Sec. 4.3 item 6: the adaptive grid is initialised from *that persona's*
+    """Sec. 4.4 item 6: the adaptive grid is initialised from *that persona's*
     training-split utterances, which is where its advantage comes from."""
     generic = ["the weather is fine today", "please close the window", "what time is it"] * 40
     personal = ["my baclofen is due at four", "baclofen makes the cramp easier"] * 40
@@ -91,7 +91,7 @@ def test_adaptive_ranker_tracks_recency() -> None:
 def test_kspc_counts_keystrokes_not_switch_activations() -> None:
     """KSPC is a text-entry measure: one keystroke per chosen cell. Row-column
     scanning spends two switch activations per keystroke, and conflating the two
-    would put every system above 1.0 and make Table 7's 0.89 / 0.78 unreachable."""
+    would put every system above 1.0 and make Table 6's 0.89 / 0.78 unreachable."""
     sim = CompletionScanningSimulator(BigramRanker(SENTENCES), KLMParams())
     out = sim.simulate_utterance("I would like some tea please", np.random.default_rng(0))
     assert out.presses == 2 * out.selections

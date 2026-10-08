@@ -1,4 +1,4 @@
-"""HF backend contract (paper Sec. 3.5, Table 3: LLaMA-3-8B, 4-bit NF4, LoRA).
+"""HF backend contract (paper Sec. 3.5, Table 2: LLaMA-3-8B, 4-bit NF4, LoRA).
 
 Loading an 8B model is out of scope for a unit test, so these cover the pure
 logic the backend must get right for the metrics to mean anything. Each one

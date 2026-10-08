@@ -1,4 +1,4 @@
-"""Synthetic persona suite (paper Sec. 4.1) and the fatigue model (Sec. 4.5)."""
+"""Synthetic persona suite (paper Sec. 4.1) and the fatigue model (Sec. 4.6)."""
 
 from __future__ import annotations
 
@@ -68,7 +68,7 @@ def test_fatigue_rises_over_the_session(persona) -> None:
 
 
 def test_fatigue_model_half_life_semantics() -> None:
-    """Sec. 4.5: exponential rise; at t = half-life the rise is half-complete."""
+    """Sec. 4.6: exponential rise; at t = half-life the rise is half-complete."""
     m = FatigueModel(half_life_min=30.0, peak=0.8, baseline=0.0, noise=0.0)
     assert float(m.value(0.0)) == pytest.approx(0.0, abs=1e-9)
     assert float(m.value(30.0)) == pytest.approx(0.4, abs=1e-9)
@@ -77,7 +77,7 @@ def test_fatigue_model_half_life_semantics() -> None:
 
 
 def test_adaptation_slows_the_rise(persona) -> None:
-    """Fig. 5: TFT adaptation slows the fatigue rise after activation."""
+    """Fig. 4: TFT adaptation slows the fatigue rise after activation."""
     m = FatigueModel(half_life_min=30.0, peak=0.8, noise=0.0)
     t = np.linspace(0, 60, 61)
     base, adapted = m.value(t), m.adapted_value(t)

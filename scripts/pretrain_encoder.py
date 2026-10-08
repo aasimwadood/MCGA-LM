@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Stages 1-2: pre-train the Perceiver IO encoder and the TFT (paper Sec. 3.7, 4.8).
+"""Stages 1-2: pre-train the Perceiver IO encoder and the TFT (paper Sec. 3.7, 4.9).
 
     python scripts/pretrain_encoder.py --out runs/
 
 Stage 1 trains Perceiver IO and the TFT jointly; stage 2 trains the TFT alone on
 the same data. Fits on MAMEM/CLAS/WESAD if they are present under data/raw/, and
-on clearly-labelled synthetic physiology otherwise. Sec. 4.8 specifies 100
+on clearly-labelled synthetic physiology otherwise. Sec. 4.9 specifies 100
 epochs, batch 128, AdamW at 1e-4 with cosine decay.
 
 Run this before train.py or evaluate.py, and with the same config you intend to

@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
-"""Per-turn response-latency breakdown (paper Sec. 4.9, Table 6, Fig. 3).
+"""Per-turn response-latency breakdown (paper Sec. 4.10, Table 5).
 
     python scripts/benchmark_latency.py --out runs/ --turns 100
 
 Response latency is the switch-press-to-display interval and is the only latency
-metric this repository reports, matching Table 6. The 2000 ms physiological
+metric this repository reports, matching Table 5. The 2000 ms physiological
 sliding window is a continuously maintained buffer and is excluded.
 
-Also prints the analytic cost model of Sec. 4.9 beside the measurement. The
+Also prints the analytic cost model of Sec. 4.10 beside the measurement. The
 paper's 457 +/- 74 ms is from an NVIDIA Jetson AGX Orin with a 4-bit LLaMA-3-8B;
 numbers produced here are for this hardware and this backend.
 """
@@ -60,7 +60,7 @@ def main() -> None:
     model = MCGALM(cfg).to(device).eval()
     encoder = TurnEncoder(cfg.inputs, backend=backend)
 
-    banner("Per-turn response-latency benchmark (paper Table 6)")
+    banner("Per-turn response-latency benchmark (paper Table 5)")
     print(f"device={device}  platform={platform.platform()}  backend={cfg.llm.backend}")
 
     turns = persona.simulate_session(seed=0, n_turns=max(args.turns, 8))
@@ -112,7 +112,7 @@ def main() -> None:
     means = {k: float(np.mean(v)) if v else 0.0 for k, v in timings.items()}
     sds = {k: float(np.std(v, ddof=1)) if len(v) > 1 else 0.0 for k, v in timings.items()}
     total = sum(means.values())
-    # Table 6 note: "the quoted +/-74 ms is the linear sum of component SDs".
+    # Table 5 note: "the quoted +/-74 ms is the linear sum of component SDs".
     # That is the paper's convention, not quadrature, and it is deliberately
     # conservative -- the stages are serial, so it is the worst case rather than
     # the independent-errors case. Both are printed so the gap is visible.
@@ -120,7 +120,7 @@ def main() -> None:
     total_sd_quadrature = float(np.sqrt(sum(v**2 for v in sds.values())))
     shares = {k: (v / total if total > 0 else float("nan")) for k, v in means.items()}
 
-    print("\n| Component | measured mean ± SD (ms) | share | paper Table 6 (Jetson) | paper share |")
+    print("\n| Component | measured mean ± SD (ms) | share | paper Table 5 (Jetson) | paper share |")
     print("|---|---|---|---|---|")
     for k in means:
         stage = k.split(" (N=")[0]
@@ -133,16 +133,16 @@ def main() -> None:
     print(f"\nTotal SD by the paper's linear-sum convention: ±{total_sd_linear:.1f} ms "
           f"(in quadrature it would be ±{total_sd_quadrature:.1f} ms).")
     print("Sensor sliding window (2000 ms) is a continuous buffer and is excluded from the total.")
-    print(f"Conversational-turn-taking budget (~1 s, Table 6): "
+    print(f"Conversational-turn-taking budget (~1 s, Table 5): "
           f"{'within' if total < 1000 else 'EXCEEDED'} at {total:.0f} ms.")
 
-    # --- Sec. 4.9: the analytic cost model beside the measurement ---------- #
-    banner("Analytic computational cost (paper Sec. 4.9)")
+    # --- Sec. 4.10: the analytic cost model beside the measurement ---------- #
+    banner("Analytic computational cost (paper Sec. 4.10)")
     report = cost_report(cfg=cfg, n_tokens=cfg.llm.max_new_tokens, measured_ms=means)
     print(report.to_markdown())
 
     target = out_dir(cfg, "latency")
-    plot_latency_breakdown(means, target / "fig3_latency.png", errors=sds)
+    plot_latency_breakdown(means, target / "latency_breakdown.png", errors=sds)
     save_json({"device": str(device), "platform": platform.platform(), "backend": cfg.llm.backend,
                "means_ms": means, "sds_ms": sds, "total_ms": total,
                "total_sd_linear_ms": total_sd_linear, "total_sd_quadrature_ms": total_sd_quadrature,

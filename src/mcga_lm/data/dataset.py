@@ -25,7 +25,7 @@ class SessionTensors:
     """One simulated session, ready for the encoder."""
 
     batch: MultimodalBatch  # each field has leading dim = n_turns
-    fatigue: torch.Tensor  # (N,) ground-truth fatigue index (Sec. 4.5)
+    fatigue: torch.Tensor  # (N,) ground-truth fatigue index (Sec. 4.6)
     intent_targets: torch.Tensor  # (N, |V|) binary node indicators for Eq. (13)
     utterance_embeddings: torch.Tensor  # (N, D_w) pooled reference utterance, Eq. (11)
     turns: List[PersonaTurn]

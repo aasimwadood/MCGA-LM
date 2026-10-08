@@ -1,4 +1,4 @@
-"""Baselines and ablations (paper Sec. 4.3, 4.4).
+"""Baselines and ablations (paper Sec. 4.4, 4.5).
 """
 
 from __future__ import annotations

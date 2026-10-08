@@ -119,9 +119,9 @@ class SensorSwitchboard:
 
     @classmethod
     def reduced_consumer_set(cls) -> "SensorSwitchboard":
-        """Table 5's consumer configuration: EDA + PPG(HRV) + monocular gaze.
+        """Sec. 4.7's consumer configuration: EDA + PPG(HRV) + monocular gaze.
 
-        Sec. 4.6 / 5.6. EEG is the sensor that is "clinical/research only", so
+        Sec. 4.7 / 5.6. EEG is the sensor that is "clinical/research only", so
         the consumer configuration is exactly this switchboard with EEG off --
         which is also Sec. 3.9's worked example, and why both report the same
         SACT of 4.2.
@@ -199,9 +199,9 @@ class SensorSwitchboard:
     def beh_mask(self, dims, monocular: bool = False) -> np.ndarray:
         """Channel mask over ``x_beh`` = [gaze_x, gaze_y, pupil, blink].
 
-        ``monocular=True`` is Table 5's consumer gaze: a webcam gives one eye, so
-        the binocular-only channel (pupil diameter, which the paper's Table 5
-        pairs with a 60 Hz binocular tracker) is dropped while the gaze point and
+        ``monocular=True`` is Sec. 4.7's consumer gaze: a webcam gives one eye, so
+        the binocular-only channel (pupil diameter, which needs the 60 Hz
+        binocular tracker of the full configuration) is dropped while the gaze point and
         blink rate survive.
         """
         mask = np.ones(dims.beh_features, dtype=np.float32)

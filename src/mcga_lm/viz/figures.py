@@ -1,4 +1,4 @@
-"""Figure reproduction (paper Figs. 2-6).
+"""Figure reproduction (paper Figs. 2-5, and the latency breakdown of Table 5).
 
 Every figure is drawn from measured output of THIS implementation. No value from
 the paper's tables is hard-coded into a plot. Where the paper's own number is
@@ -6,10 +6,10 @@ useful for orientation it goes in the title or an annotation and is labelled as
 the paper's, never plotted as if it were ours.
 
   Fig. 2  confidence calibration curves + ECE
-  Fig. 3  per-turn response-latency breakdown
-  Fig. 4  ablation study: SACT and hallucination rate
-  Fig. 5  simulated fatigue index over a 60-minute conversation
-  Fig. 6  cold-start personalisation learning curve with 95% bootstrap CI
+  Fig. 3  ablation study: SACT and hallucination rate
+  Fig. 4  simulated fatigue index over a 60-minute conversation
+  Fig. 5  cold-start personalisation learning curve with 95% bootstrap CI
+  (none)  per-turn response-latency breakdown: Table 5 in v3, Fig. 3 before it
 """
 
 from __future__ import annotations
@@ -78,10 +78,10 @@ def plot_latency_breakdown(
     errors: Optional[Dict[str, float]] = None,
     paper_total_ms: float = 457.0,
 ) -> str:
-    """Fig. 3: per-turn response latency, defined switch-press -> display.
+    """Per-turn response latency (Table 5), defined switch-press -> display.
 
     The 2000 ms physiological sliding window is a continuously updated buffer and
-    is excluded from the total, exactly as Table 6 states.
+    is excluded from the total, exactly as Table 5 states.
     """
     names = list(components)
     values = [components[n] for n in names]
@@ -94,7 +94,7 @@ def plot_latency_breakdown(
     ax.set_xlabel("Response latency contribution (ms)")
     ax.set_title(
         f"Measured per-turn response latency (total {sum(values):.0f} ms)\n"
-        f"paper Table 6 reports {paper_total_ms:.0f} ms on a Jetson AGX Orin",
+        f"paper Table 5 reports {paper_total_ms:.0f} ms on a Jetson AGX Orin",
         fontsize=9,
     )
     ax.grid(axis="x", alpha=0.25)
@@ -102,7 +102,7 @@ def plot_latency_breakdown(
         0.5,
         -0.04,
         "The 2000 ms physiological sliding window is a continuously updated buffer, "
-        "not a per-turn cost, and is excluded (Table 6).",
+        "not a per-turn cost, and is excluded (Table 5).",
         ha="center",
         fontsize=7,
         style="italic",
@@ -119,7 +119,7 @@ def plot_ablation(
     halluc_sd: Sequence[float],
     out_path: str | Path,
 ) -> str:
-    """Fig. 4: SACT and hallucination rate for the full system and each ablation."""
+    """Fig. 3: SACT and hallucination rate for the full system and each ablation."""
     fig, axes = plt.subplots(1, 2, figsize=(10.5, 4.2))
     axes[0].bar(names, sact_mean, yerr=sact_sd, capsize=4, color="#2a9d8f")
     axes[0].set_ylabel("Switch activations per turn (SACT) $\\downarrow$")
@@ -145,7 +145,7 @@ def plot_fatigue_trajectory(
     out_path: str | Path,
     onset_min: float = 20.0,
 ) -> str:
-    """Fig. 5: simulated fatigue index over a 60-minute conversation."""
+    """Fig. 4: simulated fatigue index over a 60-minute conversation."""
     fig, ax = plt.subplots(figsize=(6.2, 4.0))
     ax.plot(minutes, without_adaptation, "--", color="#e63946", label="Without adaptation (simulated)")
     ax.plot(minutes, with_adaptation, "-", color="#2a9d8f", label="MCGA-LM (TFT adaptation)")
@@ -169,7 +169,7 @@ def plot_learning_curve(
     out_path: str | Path,
     full_personalisation_at: Optional[int] = None,
 ) -> str:
-    """Fig. 6: cold-start personalisation learning curve, 95% bootstrap CI."""
+    """Fig. 5: cold-start personalisation learning curve, 95% bootstrap CI."""
     fig, ax = plt.subplots(figsize=(6.4, 4.2))
     ax.fill_between(n_utterances, ci_low, ci_high, alpha=0.25, color="#4a90d9", label="95% CI")
     ax.plot(n_utterances, mean_sact, "-o", ms=4, color="#1f6fb2", label="MCGA-LM (mean)")
@@ -194,7 +194,7 @@ def plot_learning_curve(
 def bootstrap_ci(
     values: Sequence[float], n_iter: int = 2000, seed: int = 0, alpha: float = 0.05
 ) -> Tuple[float, float, float]:
-    """Mean with a percentile bootstrap CI, used by Fig. 6."""
+    """Mean with a percentile bootstrap CI, used by Fig. 5."""
     rng = np.random.default_rng(seed)
     x = np.asarray(values, dtype=float)
     if x.size == 0:

@@ -86,7 +86,7 @@ def test_top_k_defaults_to_the_paper_value(torch_mod, cfg) -> None:
     torch = torch_mod
     gat = GraphAttentionIntentMemory(query_dim=8, cfg=cfg.graph)
     scores = torch.rand(1, 50)
-    assert len(gat.select_active_subgraph(scores).node_ids) == 5  # K_top = 5, Table 3
+    assert len(gat.select_active_subgraph(scores).node_ids) == 5  # K_top = 5, Table 2
 
 
 def test_attention_is_query_dependent(torch_mod, small_cfg) -> None:

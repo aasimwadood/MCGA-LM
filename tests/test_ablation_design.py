@@ -1,14 +1,14 @@
-"""Ablation design (paper Sec. 4.4), including the full-factorial reading of D-10."""
+"""Ablation design (paper Sec. 4.5), including the full-factorial reading of D-10."""
 
 from __future__ import annotations
 
 
 # ------------------------------------------------ D-10: full factorial ----- #
 def test_full_factorial_design_has_two_to_the_k_cells() -> None:
-    """DEVIATION D-10: Sec. 4.4 says "full-factorial" but describes one-at-a-time.
+    """DEVIATION D-10: Sec. 4.5 says "full-factorial" but describes one-at-a-time.
 
     The design the first sentence claims has 2^k cells for k components. With
-    the paper's five that is 32, against the six conditions Fig. 4 plots.
+    the paper's five that is 32, against the six conditions Fig. 3 plots.
     """
     from mcga_lm.baselines.variants import FACTORS, full_factorial_design
 
@@ -18,7 +18,7 @@ def test_full_factorial_design_has_two_to_the_k_cells() -> None:
 
 
 def test_one_at_a_time_conditions_are_a_subset_of_the_factorial_design() -> None:
-    """Fig. 4's five ablations are the single-factor cells of the 2^k design."""
+    """Fig. 3's five ablations are the single-factor cells of the 2^k design."""
     from mcga_lm.baselines.variants import ABLATIONS, full_factorial_design
 
     names = {c.name for c in full_factorial_design()}

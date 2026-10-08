@@ -1,6 +1,6 @@
 """A weight-free template realiser standing in for the paper's LLM.
 
-DEVIATION. The paper uses LLaMA-3-8B (Table 3). This backend reproduces the
+DEVIATION. The paper uses LLaMA-3-8B (Table 2). This backend reproduces the
 *interfaces* the architecture needs -- fatigue-modulated temperature, nucleus
 sampling, retrieval conditioning, token embeddings for the scoring head -- so the
 pipeline runs on CPU with no model weights. It reproduces none of the fluency,

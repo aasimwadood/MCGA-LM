@@ -1,4 +1,4 @@
-"""Evaluation metrics (paper Sec. 4.2).
+"""Evaluation metrics (paper Sec. 4.3).
 
 Communication efficiency
   SACT     switch activations per communicative turn (primary endpoint)
@@ -25,7 +25,7 @@ import numpy as np
 
 # ------------------------------------------------------- efficiency ------- #
 def sact(results: Sequence) -> float:
-    """Mean switch activations per communicative turn (Sec. 4.2)."""
+    """Mean switch activations per communicative turn (Sec. 4.3)."""
     values = [r.sact for r in results]
     return float(np.mean(values)) if values else float("nan")
 
@@ -33,7 +33,7 @@ def sact(results: Sequence) -> float:
 def words_per_minute(
     results: Sequence, seconds_per_activation: float, overhead_s: float = 1.0
 ) -> float:
-    """WPM: total words produced divided by session time (Sec. 4.2).
+    """WPM: total words produced divided by session time (Sec. 4.3).
 
     Session time is modelled as ``SACT * T_select + overhead`` per turn, which
     includes selection, reading and error-correction time as the paper requires.
@@ -51,18 +51,16 @@ def words_per_minute(
 
 
 def information_transfer_rate(n_choices: int, accuracy: float, select_seconds: float) -> float:
-    """Wolpaw et al. (2002) ITR in bits/min, as written in Sec. 4.2.
+    """Wolpaw et al. (2002) ITR in bits/min, as written in Sec. 4.3.
 
         ITR = (1/T) [ log2 N + P log2 P + (1-P) log2((1-P)/(N-1)) ]
 
     Sec. 5.2 reports this only for the intent-selection stage (N = K
     candidates), never for the open-ended generation pipeline.
 
-    DEVIATION D-12: the paper's own worked example does not check out. Sec. 5.2
-    gives K = 3, P = 0.89, T_select = 4.2 s and reports 18.3 bits/min; this
-    formula returns 13.93 for those inputs. T_select ~ 3.2 s would give 18.3.
-    We keep the stated 4.2 s, so this function cannot reproduce the printed
-    figure.
+    Sec. 5.2's worked example -- K = 3, P = 0.89, T_select = 4.2 s -- gives
+    13.9 bits/min, which this function reproduces. Before v3 the paper printed
+    18.3 for the same inputs (ERRATA.md, E-2).
     """
     if n_choices < 2 or select_seconds <= 0:
         return float("nan")
@@ -84,7 +82,7 @@ def intent_hit_rate(results: Sequence, k: int) -> float:
 
 
 def keystrokes_per_character(n_keystrokes: float, n_characters: float) -> float:
-    """KSPC -- used for the character-level baselines (Sec. 4.3, Table 7 note)."""
+    """KSPC -- used for the character-level baselines (Sec. 4.4, Table 6 note)."""
     if n_characters <= 0:
         return float("nan")
     return float(n_keystrokes / n_characters)
@@ -105,7 +103,7 @@ def kspc_from_results(results: Sequence, seconds_per_activation: float = 1.0) ->
 
 # ------------------------------------------------------------ safety ------ #
 def false_acceptance_rate(results: Sequence) -> float:
-    """FAR: share of gate-passing utterances the user then rejected (Sec. 4.2).
+    """FAR: share of gate-passing utterances the user then rejected (Sec. 4.3).
 
     Denominator is the set of candidates that passed the Bayesian gate and were
     presented; numerator is those the simulated user rejected.
@@ -128,7 +126,7 @@ def abstention_rate(results: Sequence) -> float:
 def expected_calibration_error(
     confidences: Sequence[float], correct: Sequence[bool], n_bins: int = 10
 ) -> float:
-    """ECE over ``n_bins`` equal-width bins (Sec. 4.2; Guo et al., 2017)."""
+    """ECE over ``n_bins`` equal-width bins (Sec. 4.3; Guo et al., 2017)."""
     conf = np.asarray(confidences, dtype=float)
     acc = np.asarray(correct, dtype=float)
     if conf.size == 0:
@@ -214,7 +212,7 @@ def lcs_length(a: Sequence[str], b: Sequence[str]) -> int:
 
 
 def rouge_l(reference: str, hypothesis: str, beta: float = 1.2) -> float:
-    """ROUGE-L F-measure (Sec. 4.2)."""
+    """ROUGE-L F-measure (Sec. 4.3)."""
     ref = reference.lower().split()
     hyp = hypothesis.lower().split()
     if not ref or not hyp:

@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
-"""The main experiment: Tables 7-8 and Fig. 2 (paper Sec. 4.2, 4.3, 5.1).
+"""The main experiment: Tables 6-7 and Fig. 2 (paper Sec. 4.3, 4.4, 5.1).
 
     python scripts/evaluate.py --out runs/ --pretrained runs/pretrain/encoder_pretrained.pt
 
-Runs MCGA-LM against every baseline of Sec. 4.3 over the persona suite, on the
-in-distribution and held-out splits, and reports results descriptively with
-Cohen's d_s on SACT, as the revised Sec. 4.8 does. ``--inferential`` adds the
-original Sec. 4.7 plan (ANOVA, p-values, bootstrap intervals), which the revised
-paper withdraws (ERRATA.md, E-1).
+Runs MCGA-LM against every baseline of Sec. 4.4 over the persona suite, on the
+in-distribution and held-out splits, and runs the Sec. 4.8 statistical analysis
+plan: repeated-measures ANOVA on SACT with Holm-corrected paired tests, ART and
+Wilcoxon tests for hallucination rate and IHR@3, KL and bootstrapped ECE
+differences for calibration, Table 7's significance markers, and Cohen's d_s.
+``--descriptive-only`` reports means, SDs and d_s without any test (not in the
+paper).
 
 ``--instruction-data`` runs Sec. 3.7's instruction-tuning step before any system
 is trained; each system then fine-tunes per-persona LoRA adapters (LLaMA only).
@@ -38,6 +40,9 @@ from _common import (
 
 GENERATIVE = ["MCGA-LM", "RAG-LLM", "M-LLM", "LLM-Only"]
 KEYSTROKE = ["TouchChat", "Static-WP-bigram", "Adaptive-grid"]
+# Sec. 5.1: the SACT ANOVA covers the five utterance-level systems of the
+# original design; the Non-LLM Intent baseline is compared descriptively only.
+ANOVA_SYSTEMS = ["TouchChat", "LLM-Only", "M-LLM", "RAG-LLM", "MCGA-LM"]
 
 
 def main() -> None:
@@ -54,9 +59,9 @@ def main() -> None:
         "(see the Reproduction status section of README.md)",
     )
     parser.add_argument(
-        "--inferential",
+        "--descriptive-only",
         action="store_true",
-        help="also run the original Sec. 4.7 tests (withdrawn from the revised paper; ERRATA E-1)",
+        help="skip the Sec. 4.8 tests and report means, SDs and Cohen's d_s only (not in the paper)",
     )
     parser.add_argument(
         "--instruction-data",
@@ -124,18 +129,18 @@ def main() -> None:
             )
             heldout[name] = ho
 
-    banner("Keystroke-level baselines (paper Sec. 4.3 items 1, 5, 6)")
+    banner("Keystroke-level baselines (paper Sec. 4.4 items 1, 5, 6)")
     sentences = corpus_sentences(cfg, personas)
     for name in KEYSTROKE:
         results[name] = R.run_keystroke_baseline(name, cfg, personas, seeds, sentences)
 
-    banner("Non-LLM intent classifier (paper Sec. 4.3 item 7)")
+    banner("Non-LLM intent classifier (paper Sec. 4.4 item 7)")
     classifier = IntentClassifierBaseline(cfg).to(device)
     _train_classifier(classifier, cfg, personas, device, epochs=max(1, args.head_epochs))
     results["Non-LLM-Intent"] = R.run_intent_classifier(cfg, classifier, personas, seeds, device)
 
-    banner("Effect sizes (revised Sec. 4.8)" + (" and the original Sec. 4.7 tests" if args.inferential else ""))
-    stats = _statistics(results, cfg, S, inferential=args.inferential)
+    banner("Effect sizes only (--descriptive-only)" if args.descriptive_only else "Statistical analysis (paper Sec. 4.8)")
+    stats = _statistics(results, cfg, S, descriptive_only=args.descriptive_only)
 
     payload = {
         "config": cfg.to_dict(),
@@ -224,18 +229,15 @@ def _train_classifier(classifier, cfg, personas, device, epochs: int) -> None:
                 optimiser.step()
 
 
-def _statistics(results, cfg, S, inferential: bool = False) -> Dict:
-    """Effect sizes on SACT as the revised paper reports them (Sec. 4.8, 5.1).
+def _statistics(results, cfg, S, descriptive_only: bool = False) -> Dict:
+    """Sec. 4.8's analysis plan, and the SACT effect sizes of Sec. 5.1.
 
     Cohen's d_s of each system against MCGA-LM, from the per-condition means and
-    SDs -- the pooled-SD form that can be recomputed from Table 7 -- signed so a
-    positive value favours MCGA-LM. No inferential tests: the revision withdraws
-    them (ERRATA.md, E-1).
-
-    ``inferential=True`` adds the original Sec. 4.7 plan (RM-ANOVA, Holm-corrected
-    paired tests, bootstrap intervals, ART + Wilcoxon), which these runs can
-    compute because they have per-persona data. It has no counterpart in the
-    revised paper.
+    SDs -- the pooled-SD form that can be recomputed from Table 6 -- signed so a
+    positive value favours MCGA-LM. Unless ``descriptive_only``, the tests of
+    :func:`mcga_lm.eval.stats.analysis_plan` follow: the SACT ANOVA over
+    ``ANOVA_SYSTEMS``, and every other test over the generative systems, which
+    are the rows of Table 7.
     """
     names = [n for n in results if np.isfinite(results[n].column("sact")).all()]
     if "MCGA-LM" not in names or len(names) < 2:
@@ -251,51 +253,19 @@ def _statistics(results, cfg, S, inferential: bool = False) -> Dict:
             {"comparison": f"MCGA-LM vs {name}", "d_s": d_s, "large_effect": bool(abs(d_s) > 0.8)}
         )
     out: Dict = {"sact_systems": names, "sact_effect_sizes_vs_MCGA-LM": effect_sizes}
-    if inferential:
-        out["inferential"] = _inferential(results, names, matrix, ref, cfg, S)
-    return out
-
-
-def _inferential(results, names, matrix, ref, cfg, S) -> Dict:
-    """The original Sec. 4.7 plan, withdrawn from the revised paper (E-1)."""
-    anova = S.repeated_measures_anova(matrix)
-    pairwise = S.paired_t_tests(matrix, names, reference=ref)
-    holm = S.holm_bonferroni([c["p"] for c in pairwise], alpha=cfg.evaluation.holm_alpha)
-    for c, p_adj, rej in zip(pairwise, holm["p_adjusted"], holm["reject"]):
-        c["p_holm"] = p_adj
-        c["significant"] = bool(rej)
-        c["stars"] = S.stars(p_adj)
-    # Personas are resampled so the repeated-measures pairing is preserved.
-    for j, c in zip([i for i in range(len(names)) if i != ref], pairwise):
-        # Baseline first, so a positive d_s favours MCGA-LM as in the main table.
-        ci = S.bootstrap_effect_size(
-            matrix[:, j], matrix[:, ref], n_iter=cfg.evaluation.bootstrap_iters, seed=cfg.seed
+    if not descriptive_only:
+        out["analysis_plan"] = S.analysis_plan(
+            sact={n: results[n].column("sact") for n in ANOVA_SYSTEMS if n in results},
+            metrics={
+                n: {m: results[n].column(m) for m in results[n].aggregate}
+                for n in GENERATIVE
+                if n in results
+            },
+            n_iter=cfg.evaluation.bootstrap_iters,
+            alpha=cfg.evaluation.holm_alpha,
+            seed=cfg.seed,
         )
-        c["d_s_ci_low"] = ci["ci_low"]
-        c["d_s_ci_high"] = ci["ci_high"]
-        c["d_s_formatted"] = S.format_effect_size(ci)
-
-    nonparam: Dict[str, list] = {}
-    for metric in ("hallucination_hard", "ihr@3"):
-        usable = [n for n in names if np.isfinite(results[n].column(metric)).all()]
-        if len(usable) < 2 or "MCGA-LM" not in usable:
-            continue
-        mat = np.stack([results[n].column(metric) for n in usable], axis=1)
-        ranks = S.aligned_rank_transform(mat)
-        tests = S.pairwise_wilcoxon(mat, usable, reference=usable.index("MCGA-LM"))
-        adj = S.holm_bonferroni([t["p"] for t in tests])
-        for t, p_adj in zip(tests, adj["p_adjusted"]):
-            t["p_holm"] = p_adj
-            t["stars"] = S.stars(p_adj)
-        nonparam[metric] = tests
-        nonparam[f"{metric}_art_rank_means"] = ranks.mean(axis=0).tolist()
-
-    return {
-        "sact_anova": anova.as_dict(),
-        "sact_pairwise_vs_MCGA-LM": pairwise,
-        "nonparametric": nonparam,
-        "post_hoc_power_f0.40": S.post_hoc_power(0.40, matrix.shape[0], matrix.shape[1]),
-    }
+    return out
 
 
 def _fmt(agg: Dict[str, Dict[str, float]], key: str, scale: float = 1.0, nd: int = 1) -> str:
@@ -305,7 +275,7 @@ def _fmt(agg: Dict[str, Dict[str, float]], key: str, scale: float = 1.0, nd: int
 
 
 def _fmt_sact(agg: Dict[str, Dict[str, float]]) -> str:
-    """SACT as Table 7 prints it: ``mean ± SD (median M [Q1-Q3])``."""
+    """SACT as Table 6 prints it: ``mean ± SD (median M [Q1-Q3])``."""
     if "sact" not in agg or not np.isfinite(agg["sact"]["mean"]):
         return "n/r"
     a = agg["sact"]
@@ -319,7 +289,7 @@ def _markdown_tables(results, heldout, stats, report=None) -> str:
     lines: List[str] = []
     lines.append("# MCGA-LM results (synthetic personas)\n")
     lines.append("> " + provenance_note().replace("\n", " ") + "\n")
-    lines.append("## Table 7 analogue - primary comparison\n")
+    lines.append("## Table 6 analogue - primary comparison\n")
     lines.append("| System | WPM ↑ | SACT ↓ | IHR@3 ↑ | Hard halluc. ↓ | Soft halluc. | FAR ↓ | Abstain |")
     lines.append("|---|---|---|---|---|---|---|---|")
     for name, res in results.items():
@@ -329,17 +299,32 @@ def _markdown_tables(results, heldout, stats, report=None) -> str:
             f"{_fmt(a,'hallucination_hard',100,1)} | {_fmt(a,'hallucination_soft',100,1)} | "
             f"{_fmt(a,'far',100,1)} | {_fmt(a,'abstention',100,1)} |"
         )
-    lines.append("\n## Table 8 analogue - retrieval, fluency and calibration\n")
+    plan = stats.get("analysis_plan", {})
+    # Table 7's superscripts: post-hoc paired t-test vs MCGA-LM, Holm-corrected.
+    marks = {
+        (metric, t["system"]): t["stars"]
+        for metric, tests in plan.get("table_7", {}).items()
+        for t in tests
+        if t["significant"]
+    }
+    lines.append("\n## Table 7 analogue - retrieval, fluency and calibration\n")
     lines.append("| System | IHR@1 ↑ | IHR@5 ↑ | BLEU-4 ↑ | ROUGE-L ↑ | ECE ↓ | KSPC ↓ |")
     lines.append("|---|---|---|---|---|---|---|")
     for name, res in results.items():
         a = res.aggregate
+        cell = {m: marks.get((m, name), "") for m in ("ihr@1", "ihr@5", "bleu4", "rouge_l", "ece")}
         lines.append(
-            f"| {name} | {_fmt(a,'ihr@1',100,0)} | {_fmt(a,'ihr@5',100,0)} | {_fmt(a,'bleu4',1,2)} | "
-            f"{_fmt(a,'rouge_l',1,2)} | {_fmt(a,'ece',1,3)} | {_fmt(a,'kspc',1,2)} |"
+            f"| {name} | {_fmt(a,'ihr@1',100,0)}{cell['ihr@1']} | {_fmt(a,'ihr@5',100,0)}{cell['ihr@5']} | "
+            f"{_fmt(a,'bleu4',1,2)}{cell['bleu4']} | {_fmt(a,'rouge_l',1,2)}{cell['rouge_l']} | "
+            f"{_fmt(a,'ece',1,3)}{cell['ece']} | {_fmt(a,'kspc',1,2)} |"
+        )
+    if plan.get("table_7"):
+        lines.append(
+            "\nSignificance vs. MCGA-LM (post-hoc paired t-test, Holm-corrected): "
+            "\\*\\*\\* p<0.001, \\*\\* p<0.01, \\* p<0.05."
         )
     if heldout:
-        lines.append("\n## Held-out split (context/interlocutor/topic absent from the graph, Sec. 4.2)\n")
+        lines.append("\n## Held-out split (context/interlocutor/topic absent from the graph, Sec. 4.3)\n")
         lines.append("| System | Hard halluc. ↓ | Soft halluc. | IHR@3 ↑ |")
         lines.append("|---|---|---|---|")
         for name, res in heldout.items():
@@ -349,34 +334,14 @@ def _markdown_tables(results, heldout, stats, report=None) -> str:
                 f"{_fmt(a,'ihr@3',100,0)} |"
             )
     if "sact_effect_sizes_vs_MCGA-LM" in stats:
-        lines.append("\n## Effect sizes on SACT (revised Sec. 4.8)\n")
+        lines.append("\n## Effect sizes on SACT (Sec. 5.1)\n")
         lines.append("| Contrast | Cohen's d_s (positive favours MCGA-LM) |")
         lines.append("|---|---|")
         for c in stats["sact_effect_sizes_vs_MCGA-LM"]:
             lines.append(f"| {c['comparison']} | {c['d_s']:.2f} |")
         lines.append("\nd_s uses the pooled within-condition SD, so it can be recomputed from the table above.")
-    if "inferential" in stats:
-        inf = stats["inferential"]
-        a = inf["sact_anova"]
-        lines.append("\n## Inferential statistics (original Sec. 4.7 plan, `--inferential`)\n")
-        lines.append(
-            "> The revised paper reports no inferential tests. The ANOVA, p-values and "
-            "intervals below have no counterpart in it (ERRATA.md, E-1).\n"
-        )
-        lines.append(
-            f"Repeated-measures ANOVA on SACT: F({a['df1']:.1f}, {a['df2']:.1f}) = {a['F']:.2f}, "
-            f"p = {a['p']:.2e}, partial eta^2 = {a['partial_eta_sq']:.3f}"
-            + (" (Greenhouse-Geisser corrected)" if a["gg_corrected"] else "")
-        )
-        lines.append("\n| Contrast | Cohen's d_s [95% bootstrap CI], positive favours MCGA-LM | p (Holm) | |")
-        lines.append("|---|---|---|---|")
-        for c in inf["sact_pairwise_vs_MCGA-LM"]:
-            d = c.get("d_s_formatted", f"{c['d_s']:.2f}")
-            lines.append(f"| {c['comparison']} | {d} | {c['p_holm']:.2e} | {c['stars']} |")
-        lines.append(
-            "\nIntervals are 95% bootstrap percentile intervals over personas "
-            "(10,000 resamples), resampled pairwise so the repeated-measures pairing is preserved."
-        )
+    if plan:
+        lines.extend(_plan_markdown(plan))
     if report is not None:
         missed = sorted(getattr(report, "far_budget_missed", ()) or ())
         lines.append("\n## Safety calibration (paper Sec. 3.6)\n")
@@ -395,6 +360,56 @@ def _markdown_tables(results, heldout, stats, report=None) -> str:
                 "calibrated confidence floor."
             )
     return "\n".join(lines) + "\n"
+
+
+def _anova_line(label: str, a: Dict) -> str:
+    return (
+        f"{label}: F({a['df1']:.1f}, {a['df2']:.1f}) = {a['F']:.2f}, p = {a['p']:.2e}, "
+        f"partial eta^2 = {a['partial_eta_sq']:.3f}"
+        + (" (Greenhouse-Geisser corrected)" if a["gg_corrected"] else "")
+    )
+
+
+def _plan_markdown(plan: Dict) -> List[str]:
+    """The Sec. 4.8 tests, in the order the paper describes them."""
+    lines = ["\n## Statistical analysis (Sec. 4.8)\n"]
+    lines.append(
+        "> The personas are simulated, so these p-values describe how consistently the "
+        "systems differ across the simulator's persona space, not a population of users "
+        "(Sec. 4.8). Holm-Bonferroni correction is within each metric family.\n"
+    )
+    if "sact_anova" in plan:
+        a = plan["sact_anova"]
+        lines.append(_anova_line(f"Repeated-measures ANOVA on SACT ({', '.join(a['systems'])})", a))
+        lines.append("\n| Contrast | t | p (Holm) | |")
+        lines.append("|---|---|---|---|")
+        for c in plan["sact_pairwise"]:
+            lines.append(f"| {c['comparison']} | {c['statistic']:.2f} | {c['p_holm']:.2e} | {c['stars']} |")
+    for metric, res in plan.get("nonparametric", {}).items():
+        lines.append(f"\n### {metric}: aligned rank transform + Wilcoxon\n")
+        lines.append(_anova_line("ANOVA on aligned ranks", res["art_anova"]))
+        lines.append("\n| Contrast | W | p (Holm) | |")
+        lines.append("|---|---|---|---|")
+        for c in res["pairwise_wilcoxon"]:
+            lines.append(f"| {c['comparison']} | {c['statistic']:.1f} | {c['p_holm']:.2e} | {c['stars']} |")
+    calibration = plan.get("calibration", {})
+    if calibration:
+        lines.append("\n### Calibration\n")
+    if "kl_from_diagonal" in calibration:
+        lines.append("| System | KL from the diagonal ↓ |")
+        lines.append("|---|---|")
+        for name, kl in calibration["kl_from_diagonal"].items():
+            lines.append(f"| {name} | {kl['mean']:.3f} ± {kl['sd']:.3f} |")
+    if "ece_bootstrap" in calibration:
+        lines.append("\n| Contrast | ECE difference [95% bootstrap CI] | p (Holm) | |")
+        lines.append("|---|---|---|---|")
+        for c in calibration["ece_bootstrap"]:
+            lines.append(
+                f"| {c['comparison']} | {c['ece_difference']:.3f} [{c['ci_low']:.3f}, {c['ci_high']:.3f}] | "
+                f"{c['p_holm']:.2e} | {c['stars']} |"
+            )
+        lines.append("\nPersonas are resampled in pairs, so the repeated-measures pairing is preserved.")
+    return lines
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-"""LoRA personalisation of the language model (paper Sec. 3.5, 3.6, 3.7, 4.8).
+"""LoRA personalisation of the language model (paper Sec. 3.5, 3.6, 3.7, 4.9).
 
 What the paper specifies, and where it lives here:
 
@@ -8,7 +8,7 @@ What the paper specifies, and where it lives here:
   * Sec. 3.6: "Accepted utterances update the intent graph and, after a 24-hour
     on-device queue, fine-tune the LoRA adapters." :class:`LoRAUpdateQueue`
     holds accepted pairs until they are 24 hours old.
-  * Sec. 4.8: "LoRA fine-tuning converges in 3 epochs per user"
+  * Sec. 4.9: "LoRA fine-tuning converges in 3 epochs per user"
     (``TrainingConfig.lora_epochs``).
   * Sec. 3.7 stage 3: "the LLM (instruction-tuned on a generic AAC prompt
     dataset) is then fine-tuned with LoRA". :func:`instruction_tune` runs that

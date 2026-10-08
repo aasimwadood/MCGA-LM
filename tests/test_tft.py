@@ -48,7 +48,7 @@ def test_variable_selection_prunes_uninformative_dimensions(torch_mod, small_cfg
 
 
 def test_disabled_tft_returns_the_low_fatigue_state(torch_mod, small_cfg) -> None:
-    """Ablation "\\ TFT" (Sec. 4.4): s_cog fixed to "low fatigue"."""
+    """Ablation "\\ TFT" (Sec. 4.5): s_cog fixed to "low fatigue"."""
     from mcga_lm.models.tft import TemporalFusionTransformer
 
     small_cfg.tft.enabled = False

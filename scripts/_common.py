@@ -97,6 +97,6 @@ def provenance_note() -> str:
     return (
         "Produced by the MCGA-LM reference implementation on synthetic personas. "
         "These are not the paper's reported figures. Runs on the template backend "
-        "(configs/cpu.yaml, configs/quick.yaml) use no language model at all; see the "
+        "(configs/default.yaml, configs/quick.yaml) use no language model at all; see the "
         "Reproduction status section of README.md for what differs and why."
     )

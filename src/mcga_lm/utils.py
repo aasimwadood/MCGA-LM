@@ -1,6 +1,6 @@
 """Small shared helpers: logging, JSON output, device resolution, summaries.
 
-``median_iqr`` exists because Table 7 reports SACT as a mean with a median and
+``median_iqr`` exists because Table 6 reports SACT as a mean with a median and
 interquartile range alongside it.
 """
 
@@ -69,10 +69,10 @@ def mean_sd(values: Iterable[float]) -> Dict[str, float]:
 
 
 def median_iqr(values: Iterable[float]) -> Dict[str, float]:
-    """Median and interquartile range (Table 7 reports a median [IQR] for SACT).
+    """Median and interquartile range (Table 6 reports a median [IQR] for SACT).
 
     Returns NaNs for an empty sample, which happens for the character-level
-    baselines whose SACT is "n/r" in Table 7.
+    baselines whose SACT is "n/r" in Table 6.
     """
     arr = np.asarray(list(values), dtype=float)
     if arr.size == 0:

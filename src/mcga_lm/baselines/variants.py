@@ -1,17 +1,17 @@
 """Configuration variants for the generative baselines and ablations.
 
-Baselines (paper Sec. 4.3)
+Baselines (paper Sec. 4.4)
   LLM-Only   dialogue history + brief profile only -- "disembodied generative AI"
   M-LLM      Perceiver IO / TFT retained, graph memory replaced by a generic
              prompt -- isolates the intent graph's contribution
   RAG-LLM    queries the graph but decodes at fixed temperature -- isolates
              adaptive modulation
 
-Ablations (paper Sec. 4.4): the paper writes these with a set-minus sign --
+Ablations (paper Sec. 4.5): the paper writes these with a set-minus sign --
 remove Perceiver IO, TFT, GAT, the Bayesian gate, or cross-attention.
 
-Sec. 4.4 calls the ablation "full-factorial" and then describes removing one
-component at a time. Fig. 4 shows the one-at-a-time design, which is the default;
+Sec. 4.5 calls the ablation "full-factorial" and then describes removing one
+component at a time. Fig. 3 shows the one-at-a-time design, which is the default;
 ``full_factorial_design()`` builds the 2^k design the first sentence claims. See
 ERRATA.md.
 """
@@ -50,7 +50,7 @@ def full_system(cfg: Config) -> Config:
 
 
 def llm_only(cfg: Config) -> Config:
-    """No memory graph, no fatigue adaptation, no gate (Sec. 4.3 baseline 2).
+    """No memory graph, no fatigue adaptation, no gate (Sec. 4.4 baseline 2).
 
     "Prompted with only dialogue history and a brief user profile", so no
     per-user LoRA fine-tuning either.
@@ -113,14 +113,14 @@ def ablate_cross_attention(cfg: Config) -> Config:
 
 VARIANTS: Dict[str, Variant] = {
     "MCGA-LM": Variant("MCGA-LM", full_system),
-    "LLM-Only": Variant("LLM-Only", llm_only, note="Sec. 4.3 baseline 2 (GPT-4o in the paper)"),
-    "M-LLM": Variant("M-LLM", m_llm, note="Sec. 4.3 baseline 3; == \\GAT ablation (Table 7 footnote)"),
-    "RAG-LLM": Variant("RAG-LLM", rag_llm, fixed_temperature=True, note="Sec. 4.3 baseline 4"),
-    "\\PerceiverIO": Variant("\\PerceiverIO", full_system, ablate_perceiver=True, note="Sec. 4.4"),
-    "\\TFT": Variant("\\TFT", ablate_tft, note="Sec. 4.4"),
-    "\\GAT": Variant("\\GAT", ablate_gat, note="Sec. 4.4"),
-    "\\BayesianGate": Variant("\\BayesianGate", ablate_gate, note="Sec. 4.4"),
-    "\\cross-attention": Variant("\\cross-attention", ablate_cross_attention, note="Sec. 4.4"),
+    "LLM-Only": Variant("LLM-Only", llm_only, note="Sec. 4.4 baseline 2"),
+    "M-LLM": Variant("M-LLM", m_llm, note="Sec. 4.4 baseline 3; == \\GAT ablation (Table 6 footnote)"),
+    "RAG-LLM": Variant("RAG-LLM", rag_llm, fixed_temperature=True, note="Sec. 4.4 baseline 4"),
+    "\\PerceiverIO": Variant("\\PerceiverIO", full_system, ablate_perceiver=True, note="Sec. 4.5"),
+    "\\TFT": Variant("\\TFT", ablate_tft, note="Sec. 4.5"),
+    "\\GAT": Variant("\\GAT", ablate_gat, note="Sec. 4.5"),
+    "\\BayesianGate": Variant("\\BayesianGate", ablate_gate, note="Sec. 4.5"),
+    "\\cross-attention": Variant("\\cross-attention", ablate_cross_attention, note="Sec. 4.5"),
 }
 
 
@@ -131,9 +131,9 @@ def get_variant(name: str) -> Variant:
 
 
 # --------------------------------------------------- full-factorial (D-10) -- #
-# Sec. 4.4 calls its ablation "full-factorial" and then describes "removing one
+# Sec. 4.5 calls its ablation "full-factorial" and then describes "removing one
 # component at a time", which is a one-factor-at-a-time design: k+1 conditions,
-# not 2^k. Fig. 4's five bars confirm the one-at-a-time reading, and that is what
+# not 2^k. Fig. 3's five bars confirm the one-at-a-time reading, and that is what
 # ``ABLATIONS`` and the default run implement. The genuinely full-factorial
 # design the sentence claims is built below, because the two answer different
 # questions -- one-at-a-time cannot detect an interaction, and the paper's own
@@ -173,16 +173,16 @@ def factorial_variant(removed: Sequence[str]) -> Variant:
         name,
         apply,
         ablate_perceiver="PerceiverIO" in set(removed),
-        note=f"Sec. 4.4 full-factorial cell: removed={list(ordered) or ['nothing']}",
+        note=f"Sec. 4.5 full-factorial cell: removed={list(ordered) or ['nothing']}",
     )
 
 
 def full_factorial_design(factors: Sequence[str] = tuple(FACTORS)) -> List[Variant]:
-    """All ``2^k`` cells of the design Sec. 4.4's first sentence claims.
+    """All ``2^k`` cells of the design Sec. 4.5's first sentence claims.
 
     With the paper's five components this is 32 conditions rather than 6, which
     is why it is opt-in (``--full-factorial``) rather than the default: the cost
-    is 32 training runs, and Fig. 4 reports the 6-condition version.
+    is 32 training runs, and Fig. 3 reports the 6-condition version.
     """
     cells: List[Variant] = []
     for mask in range(1 << len(factors)):

@@ -1,4 +1,4 @@
-"""Loaders for the three public pre-training corpora (paper Sec. 4.1, Table 4).
+"""Loaders for the three public pre-training corpora (paper Sec. 4.1, Table 3).
 
     MAMEM   36 participants; EEG, GSR, heart rate, eye gaze   10.5281/zenodo.834154
     CLAS    62 participants; ECG, PPG, EDA, accelerometry     10.1109/BIA48344.2019.8967457

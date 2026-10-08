@@ -1,6 +1,6 @@
-"""Analytic computational cost of one communicative turn (paper Sec. 4.9).
+"""Analytic computational cost of one communicative turn (paper Sec. 4.10).
 
-Sec. 4.9 makes four quantitative claims that are analytic rather than measured,
+Sec. 4.10 makes four quantitative claims that are analytic rather than measured,
 and this module computes them so they can be checked against the hardware:
 
 1. Decode dominates: ~2PL FLOPs, i.e. ~0.32 TFLOP for P = 8e9 and L = 20 tokens.
@@ -22,7 +22,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Dict, Mapping, Optional
 
-# Paper Sec. 4.9 / Table 6 reference figures, on an NVIDIA Jetson AGX Orin.
+# Paper Sec. 4.10 / Table 5 reference figures, on an NVIDIA Jetson AGX Orin.
 PAPER_SHARES = {
     "LLM generation": 0.613,
     "MC Dropout": 0.123,
@@ -40,7 +40,7 @@ BYTES_PER_PARAM = {"nf4": 0.5, "int8": 1.0, "fp16": 2.0, "bf16": 2.0, "fp32": 4.
 
 # --------------------------------------------------------------- decoder --- #
 def decoder_flops(n_params: int = 8_000_000_000, n_tokens: int = 20) -> float:
-    """``~ 2PL`` FLOPs for autoregressive decoding (Sec. 4.9, first sentence).
+    """``~ 2PL`` FLOPs for autoregressive decoding (Sec. 4.10, first sentence).
 
     The paper's own worked example: ``P = 8e9``, ``L = 20`` -> 0.32 TFLOP.
     Two FLOPs per parameter per token is the standard forward-pass convention
@@ -59,11 +59,11 @@ def perceiver_flops(
     self_attn_per_block: int = 2,
     ff_mult: int = 2,
 ) -> float:
-    """``O(MND + M^2 D)`` for the Perceiver IO encoder (Sec. 4.9).
+    """``O(MND + M^2 D)`` for the Perceiver IO encoder (Sec. 4.10).
 
     The first term is cross-attention against the ``N`` input tokens, the second
     is self-attention inside the fixed ``M x D`` latent array. Because ``M`` and
-    ``D`` are fixed by Table 3, only the first term depends on the input length
+    ``D`` are fixed by Table 2, only the first term depends on the input length
     at all -- which is the property the paper is claiming when it says cost "is
     independent of input length ``N``" for the dominant self-attention term.
     """
@@ -81,7 +81,7 @@ def perceiver_flops(
 
 # ------------------------------------------------------------------- TFT --- #
 def tft_flops(window: int = 32, state_dim: int = 64, lstm_hidden: int = 128, d_model: int = 512) -> float:
-    """``O(W^2 D_c)`` for the Temporal Fusion Transformer (Sec. 4.9).
+    """``O(W^2 D_c)`` for the Temporal Fusion Transformer (Sec. 4.10).
 
     The quadratic term is the self-attention over the ``W = 32`` step window;
     the LSTM and the variable-selection network are linear in ``W`` and are
@@ -97,7 +97,7 @@ def tft_flops(window: int = 32, state_dim: int = 64, lstm_hidden: int = 128, d_m
 
 # ------------------------------------------------------------------- GAT --- #
 def gat_flops(n_active_edges: int = 40, heads: int = 4, head_dim: int = 64, node_dim: int = 300) -> float:
-    """``O(|E_active| K D_h)`` for graph retrieval (Sec. 4.9).
+    """``O(|E_active| K D_h)`` for graph retrieval (Sec. 4.10).
 
     Priced over the *active neighbourhood* only, not the whole 200-500 node
     graph -- that restriction is the paper's point. Node projections are counted
@@ -112,7 +112,7 @@ def gat_flops(n_active_edges: int = 40, heads: int = 4, head_dim: int = 64, node
 
 # ----------------------------------------------------------- MC dropout --- #
 def mc_dropout_flops(head_params: int = 300_000, n_passes: int = 20, n_tokens: int = 20) -> float:
-    """``N`` stochastic passes over the *intent-scoring head only* (Sec. 4.9).
+    """``N`` stochastic passes over the *intent-scoring head only* (Sec. 4.10).
 
     This is the claim that matters for the latency budget: uncertainty
     estimation "applies ``N = 20`` stochastic passes to the intent-scoring head
@@ -141,7 +141,7 @@ def peak_memory_bytes(
     kv_dim: int = 4096,
     activation_overhead: float = 1.35,
 ) -> Dict[str, float]:
-    """Peak resident memory of the deployed configuration (Sec. 4.9: 5.6 GB).
+    """Peak resident memory of the deployed configuration (Sec. 4.10: 5.6 GB).
 
     Broken into the terms that actually move: quantised decoder weights, the
     LoRA adapter kept in fp16, the KV cache for a short utterance, the fixed
@@ -153,7 +153,7 @@ def peak_memory_bytes(
     if bpp is None:
         raise ValueError(f"unknown quantisation {quantisation!r}; expected one of {sorted(BYTES_PER_PARAM)}")
     weights = float(n_params) * bpp
-    # LoRA A and B for the Table 3 target modules, fp16.
+    # LoRA A and B for the Table 2 target modules, fp16.
     lora = 2.0 * float(lora_rank) * float(kv_dim) * 2.0 * float(kv_layers) * 2.0
     kv_cache = 2.0 * float(kv_layers) * float(kv_dim) * float(n_tokens) * 2.0
     latents = float(n_latents) * float(latent_dim) * 4.0
@@ -218,19 +218,19 @@ class CostReport:
             "takes a far larger share of arithmetic than of time, while the small "
             "perception kernels are latency bound and take more time than their "
             "arithmetic suggests. The paper's 61.3% for decode is a share of measured "
-            "wall-clock time (Sec. 4.9); the FLOP column is what the shapes cost."
+            "wall-clock time (Sec. 4.10); the FLOP column is what the shapes cost."
         )
         if self.memory:
             rows.append("")
             rows.append(
                 f"Peak memory (analytic): {self.memory['total'] / 1e9:.2f} GB "
-                f"(paper Sec. 4.9: {PAPER_PEAK_MEMORY_GB} GB; Jetson envelope {JETSON_MEMORY_GB:.0f} GB)"
+                f"(paper Sec. 4.10: {PAPER_PEAK_MEMORY_GB} GB; Jetson envelope {JETSON_MEMORY_GB:.0f} GB)"
             )
         if self.mc_dropout_multiplier_avoided:
             rows.append(
                 f"MC Dropout on the scoring head costs "
                 f"{1.0 / self.mc_dropout_multiplier_avoided:.2e} of the naive "
-                f"N-times-regeneration alternative it replaces (Sec. 4.9)."
+                f"N-times-regeneration alternative it replaces (Sec. 4.10)."
             )
         return "\n".join(rows)
 
@@ -244,12 +244,12 @@ def cost_report(
     head_params: int = 300_000,
     measured_ms: Optional[Mapping[str, float]] = None,
 ) -> CostReport:
-    """Assemble the Sec. 4.9 cost model, optionally beside measured latencies.
+    """Assemble the Sec. 4.10 cost model, optionally beside measured latencies.
 
     ``cfg`` is an optional :class:`~mcga_lm.config.Config`; when given, the
-    shapes come from it rather than from the Table 3 defaults, so the report
+    shapes come from it rather than from the Table 2 defaults, so the report
     describes the configuration that actually ran. ``measured_ms`` maps the
-    Table 6 stage names to measured milliseconds and contributes the "measured
+    Table 5 stage names to measured milliseconds and contributes the "measured
     share" column -- the quantity the paper compares its analytic model against.
     """
     if cfg is not None:

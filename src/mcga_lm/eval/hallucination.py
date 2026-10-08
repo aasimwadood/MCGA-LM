@@ -1,6 +1,6 @@
-"""Hallucination taxonomy and detection (paper Sec. 4.2, Sec. 5.2).
+"""Hallucination taxonomy and detection (paper Sec. 4.3, Sec. 5.2).
 
-Sec. 4.2 distinguishes **hard** hallucinations -- an entity, relation or fact
+Sec. 4.3 distinguishes **hard** hallucinations -- an entity, relation or fact
 directly contradicting the graph, e.g. naming the wrong caregiver -- from **soft**
 ones, absent from the graph and history but not contradicted. Both are assigned
 automatically by entity linking against G and the dialogue history; no human
@@ -70,7 +70,7 @@ class HallucinationVerdict:
 
 
 class HallucinationDetector:
-    """Rule-based entity linking against ``G`` and the dialogue history (Sec. 4.2)."""
+    """Rule-based entity linking against ``G`` and the dialogue history (Sec. 4.3)."""
 
     def __init__(self, safety_critical: Optional[Set[str]] = None) -> None:
         self.medications = set(safety_critical or MEDICATION_TERMS)
@@ -99,7 +99,7 @@ class HallucinationDetector:
                 continue  # licensed by the user's own memory or the conversation
 
             # (a) a person the user's relational world does not contain: the
-            #     canonical hard case, "naming the wrong caregiver" (Sec. 4.2).
+            #     canonical hard case, "naming the wrong caregiver" (Sec. 4.3).
             if entity in PERSON_TERMS and entity not in partner_names:
                 return HallucinationVerdict(
                     HallucinationKind.HARD, raw, "names a person absent from the intent graph"
@@ -152,7 +152,7 @@ def _history_tokens(history: Iterable[Tuple[str, str]]) -> Set[str]:
 
 
 def summarise(verdicts: Sequence[HallucinationVerdict]) -> Dict[str, float]:
-    """Hard rate (``H``) and soft rate, reported separately as in Sec. 4.2."""
+    """Hard rate (``H``) and soft rate, reported separately as in Sec. 4.3."""
     n = len(verdicts)
     if n == 0:
         return {"hard_rate": float("nan"), "soft_rate": float("nan"), "n": 0}

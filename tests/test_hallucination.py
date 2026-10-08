@@ -1,4 +1,4 @@
-"""Hallucination taxonomy and detection (paper Sec. 4.2 taxonomy box, Sec. 5.2)."""
+"""Hallucination taxonomy and detection (paper Sec. 4.3 taxonomy box, Sec. 5.2)."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ def test_entity_in_graph_is_not_a_hallucination(graph) -> None:
 
 
 def test_wrong_caregiver_is_a_hard_hallucination(graph) -> None:
-    """Sec. 4.2's canonical example: "naming the wrong caregiver"."""
+    """Sec. 4.3's canonical example: "naming the wrong caregiver"."""
     verdict = HallucinationDetector().classify(["nurse"], graph, known_partners=["Nurse_Smith"])
     assert verdict.is_hard and "person" in verdict.reason
 
@@ -44,7 +44,7 @@ def test_medication_present_in_the_graph_is_fine(graph) -> None:
 
 
 def test_absent_but_uncontradicted_entity_is_soft(graph) -> None:
-    """Sec. 4.2: "an entity absent from G and history but not contradicted"."""
+    """Sec. 4.3: "an entity absent from G and history but not contradicted"."""
     verdict = HallucinationDetector().classify(["television"], graph)
     assert verdict.is_soft
 
@@ -81,25 +81,20 @@ def test_summary_reports_hard_and_soft_separately(graph) -> None:
 
 # ---------------------------------------------------------------- D-11 ----- #
 def test_detection_is_automatic_with_no_human_annotation_path() -> None:
-    """DEVIATION D-11: the paper contradicts itself on human annotation.
-
-    Sec. 3.8 mentions "two annotators ... blinded to system identity", but
-    Sec. 4.2 ("No human adjudication of generated utterances was performed"),
-    the hallucination taxonomy ("no human annotation was involved") and Sec. 6.3
-    ("at any point in this study") all say the opposite. We implement the
-    automatic-only path those three describe. This test records that choice, so
-    that a human-adjudication path cannot appear without the discrepancy being
-    revisited.
+    """Detection is automatic only, as Sec. 4.3 ("No human adjudication of
+    generated utterances was performed"), the hallucination taxonomy and Sec. 6.3
+    say. Before v3, Sec. 3.8 also described two blinded annotators (ERRATA.md,
+    E-6). This test keeps a human-adjudication path from appearing unnoticed.
     """
     from mcga_lm.eval import hallucination as H
 
     source = inspect.getsource(H)
     assert "annotator" not in source.lower(), (
-        "an annotator path would contradict Sec. 4.2/6.3; see D-11"
+        "an annotator path would contradict Sec. 4.3/6.3; see D-11"
     )
     # Classification's only evidence is the graph and the dialogue history --
     # exactly the "rule-based entity linking against G and the dialogue history"
-    # of Sec. 4.2, with no slot for a human label.
+    # of Sec. 4.3, with no slot for a human label.
     signature = inspect.signature(H.HallucinationDetector.classify)
     assert {"entities", "graph", "history"} <= set(signature.parameters)
     assert not {"label", "annotation", "rater"} & set(signature.parameters)

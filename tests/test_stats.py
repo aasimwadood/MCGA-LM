@@ -1,4 +1,4 @@
-"""Statistical analysis plan (paper Sec. 4.7) and the effect sizes of Sec. 5.1."""
+"""Statistical analysis plan (paper Sec. 4.8) and the effect sizes of Sec. 5.1."""
 
 from __future__ import annotations
 
@@ -7,21 +7,21 @@ import pytest
 
 from mcga_lm.eval import stats as S
 
-# Table 7 of the paper: mean +/- SD of SACT across the 20 personas.
-TABLE_7_SACT = {
+# Table 6 of the paper: mean +/- SD of SACT across the 20 personas.
+TABLE_6_SACT = {
     "TouchChat": (12.2, 2.8),
     "LLM-Only": (8.7, 1.6),
     "RAG-LLM": (5.2, 1.1),
     "MCGA-LM": (3.1, 0.7),
     "M-LLM": (5.8, 1.2),
 }
-# Cohen's d_s recomputed from Table 7's means and SDs: the values the revised
+# Cohen's d_s recomputed from Table 6's means and SDs: the values the revised
 # Sec. 5.1 reports. They are NOT the values the original Sec. 5.1 printed -- see
 # ORIGINAL_PRINTED_D below and ERRATA E-1.
-DS_FROM_TABLE_7 = {"TouchChat": 4.46, "LLM-Only": 4.53, "M-LLM": 2.75, "RAG-LLM": 2.28}
+DS_FROM_TABLE_6 = {"TouchChat": 4.46, "LLM-Only": 4.53, "M-LLM": 2.75, "RAG-LLM": 2.28}
 
 # The effect sizes the original Sec. 5.1 printed, with their 95% bootstrap CIs.
-# Withdrawn in the revision: no per-persona data for them exists (ERRATA E-1).
+# Replaced by d_s in the revision: no per-persona data for them exists (ERRATA E-1).
 ORIGINAL_PRINTED_D = {
     "TouchChat": (2.34, 1.62, 3.06),
     "LLM-Only": (1.87, 1.21, 2.53),
@@ -30,32 +30,32 @@ ORIGINAL_PRINTED_D = {
 }
 
 
-@pytest.mark.parametrize("baseline,expected", DS_FROM_TABLE_7.items())
-def test_cohens_ds_matches_the_value_table_7_implies(baseline: str, expected: float) -> None:
+@pytest.mark.parametrize("baseline,expected", DS_FROM_TABLE_6.items())
+def test_cohens_ds_matches_the_value_table_6_implies(baseline: str, expected: float) -> None:
     """d_s is recomputable from a table of means and SDs; this pins the formula
     and the four values the revised Sec. 5.1 reports."""
-    m1, s1 = TABLE_7_SACT["MCGA-LM"]
-    m2, s2 = TABLE_7_SACT[baseline]
+    m1, s1 = TABLE_6_SACT["MCGA-LM"]
+    m2, s2 = TABLE_6_SACT[baseline]
     assert S.cohens_ds_from_summary(m2, s2, m1, s1) == pytest.approx(expected, abs=0.01)
 
 
 @pytest.mark.parametrize("baseline", list(ORIGINAL_PRINTED_D))
-def test_printed_effect_sizes_are_not_d_s_from_table_7(baseline: str) -> None:
-    """ERRATA E-1: the original Sec. 5.1's effect sizes are not recomputable from Table 7.
+def test_printed_effect_sizes_are_not_d_s_from_table_6(baseline: str) -> None:
+    """ERRATA E-1: the original Sec. 5.1's effect sizes are not recomputable from Table 6.
 
     The original Sec. 4.7 said effect sizes are "Cohen's d for paired contrasts"
     and Sec. 5.1 labelled them "Cohen's d (paired, over personas)". Every printed
-    value differs from the d_s implied by Table 7's means and SDs, so they are
+    value differs from the d_s implied by Table 6's means and SDs, so they are
     consistent only with the paired d_z, which needs per-persona difference
     scores that were never published and have not been found. This test records
     the discrepancy that led the revision to withdraw them.
     """
-    m1, s1 = TABLE_7_SACT["MCGA-LM"]
-    m2, s2 = TABLE_7_SACT[baseline]
+    m1, s1 = TABLE_6_SACT["MCGA-LM"]
+    m2, s2 = TABLE_6_SACT[baseline]
     d_s = S.cohens_ds_from_summary(m2, s2, m1, s1)
     printed = ORIGINAL_PRINTED_D[baseline][0]
     assert abs(d_s - printed) > 0.4, (
-        f"{baseline}: d_s from Table 7 is {d_s:.2f}, Sec. 5.1 prints {printed:.2f}"
+        f"{baseline}: d_s from Table 6 is {d_s:.2f}, Sec. 5.1 prints {printed:.2f}"
     )
 
 
@@ -68,30 +68,30 @@ def test_printed_effect_sizes_reorder_the_baselines() -> None:
     reachable with d_z, and only if the MCGA-LM/M-LLM differences vary far less
     across personas than the others -- about five times less.
     """
-    m1, _ = TABLE_7_SACT["MCGA-LM"]
-    by_ds = sorted(DS_FROM_TABLE_7, key=lambda k: -DS_FROM_TABLE_7[k])
+    m1, _ = TABLE_6_SACT["MCGA-LM"]
+    by_ds = sorted(DS_FROM_TABLE_6, key=lambda k: -DS_FROM_TABLE_6[k])
     by_printed = sorted(ORIGINAL_PRINTED_D, key=lambda k: -ORIGINAL_PRINTED_D[k][0])
     assert by_ds[0] != by_printed[0]
     assert by_printed[0] == "M-LLM"
 
     implied = {
-        k: S.implied_sd_of_differences(TABLE_7_SACT[k][0], m1, ORIGINAL_PRINTED_D[k][0])
+        k: S.implied_sd_of_differences(TABLE_6_SACT[k][0], m1, ORIGINAL_PRINTED_D[k][0])
         for k in ORIGINAL_PRINTED_D
     }
     assert implied["M-LLM"] == pytest.approx(0.71, abs=0.02)
     assert implied["TouchChat"] / implied["M-LLM"] > 4.0
 
 
-@pytest.mark.parametrize("baseline", list(DS_FROM_TABLE_7))
+@pytest.mark.parametrize("baseline", list(DS_FROM_TABLE_6))
 def test_revised_effect_sizes_stay_large_at_the_rounding_extremes(baseline: str) -> None:
     """The revised Sec. 5.1 keeps "all large effects (d > 0.8)", now as d_s.
 
-    Table 7 rounds to one decimal place, so each mean and SD may be off by up to
+    Table 6 rounds to one decimal place, so each mean and SD may be off by up to
     0.05. The claim has to survive the least favourable combination: the
     smallest mean gap with the largest SDs.
     """
-    m1, s1 = TABLE_7_SACT["MCGA-LM"]
-    m2, s2 = TABLE_7_SACT[baseline]
+    m1, s1 = TABLE_6_SACT["MCGA-LM"]
+    m2, s2 = TABLE_6_SACT[baseline]
     h = 0.05
     assert S.cohens_ds_from_summary(m2 - h, s2 + h, m1 + h, s1 + h) > 0.8
 
@@ -245,3 +245,101 @@ def test_post_hoc_power_behaves_monotonically() -> None:
     assert S.post_hoc_power(0.40, n=20, k=5, rho=0.3) > 0.90
     assert S.post_hoc_power(0.10, n=20, k=5) < base  # smaller effect, less power
     assert S.post_hoc_power(0.40, n=40, k=5) > base  # more personas, more power
+
+
+# ------------------------------------------------------------ calibration -- #
+def test_kl_from_diagonal_is_zero_for_a_calibrated_curve() -> None:
+    assert S.kl_from_diagonal([0.2, 0.5, 0.9], [0.2, 0.5, 0.9]) == pytest.approx(0.0, abs=1e-9)
+    assert np.isnan(S.kl_from_diagonal([], []))
+
+
+def test_count_weights_stop_a_one_turn_bin_dominating_the_kl() -> None:
+    confidence, accuracy, counts = [0.5, 0.95], [0.5, 0.0], [99, 1]
+    unweighted = S.kl_from_diagonal(confidence, accuracy)
+    weighted = S.kl_from_diagonal(confidence, accuracy, weights=counts)
+    assert weighted == pytest.approx(unweighted / 100)
+
+
+def test_paired_bootstrap_difference_keeps_personas_together() -> None:
+    """A constant per-persona gap has no paired sampling variability at all."""
+    b = np.random.default_rng(0).normal(0.2, 0.05, 20)
+    out = S.bootstrap_difference(b + 0.1, b, n_iter=300, seed=0, paired=True)
+    assert out["ci_low"] == pytest.approx(0.1) and out["ci_high"] == pytest.approx(0.1)
+    assert out["p_two_sided"] == pytest.approx(2 / 301)  # never zero: bounded by the resample count
+    with pytest.raises(ValueError):
+        S.bootstrap_difference(np.zeros(20), np.zeros(19), n_iter=10, paired=True)
+
+
+def test_holm_leaves_an_undefined_p_undefined() -> None:
+    tests = S._holm([{"p": 0.01}, {"p": float("nan")}, {"p": 0.02}], alpha=0.05)
+    assert tests[0]["p_holm"] == pytest.approx(0.02) and tests[2]["p_holm"] == pytest.approx(0.02)
+    assert np.isnan(tests[1]["p_holm"]) and tests[1]["stars"] == "" and not tests[1]["significant"]
+
+
+# ---------------------------------------------------------- analysis plan -- #
+# Table 7 of the paper: mean +/- SD per generative system.
+TABLE_7 = {
+    "MCGA-LM": {"ihr@1": (0.68, 0.07), "ihr@5": (0.96, 0.03), "bleu4": (0.52, 0.07), "rouge_l": (0.68, 0.06), "ece": (0.04, 0.02)},
+    "RAG-LLM": {"ihr@1": (0.54, 0.06), "ihr@5": (0.82, 0.06), "bleu4": (0.45, 0.07), "rouge_l": (0.60, 0.07), "ece": (0.09, 0.03)},
+    "M-LLM": {"ihr@1": (0.41, 0.07), "ihr@5": (0.69, 0.07), "bleu4": (0.39, 0.08), "rouge_l": (0.53, 0.06), "ece": (0.15, 0.04)},
+    "LLM-Only": {"ihr@1": (0.28, 0.06), "ihr@5": (0.55, 0.08), "bleu4": (0.31, 0.06), "rouge_l": (0.45, 0.07), "ece": (0.21, 0.05)},
+}
+TABLE_6_IHR3_HAL = {
+    "MCGA-LM": ((0.89, 0.05), (0.02, 0.01)),
+    "RAG-LLM": ((0.71, 0.07), (0.07, 0.03)),
+    "M-LLM": ((0.54, 0.06), (0.09, 0.02)),
+    "LLM-Only": ((0.42, 0.09), (0.18, 0.05)),
+}
+
+
+def _simulated_plan_inputs(n: int = 20, seed: int = 0):
+    """Per-persona scores drawn around the paper's Tables 6 and 7, with a shared
+    persona effect so the conditions are correlated, as in a repeated-measures design."""
+    rng = np.random.default_rng(seed)
+    persona = rng.normal(0, 1, n)
+    sact = {s: m + 0.5 * sd * persona + sd * rng.normal(0, 0.87, n) for s, (m, sd) in TABLE_6_SACT.items()}
+    metrics = {}
+    for system, cols in TABLE_7.items():
+        metrics[system] = {k: m + sd * rng.normal(0, 1, n) for k, (m, sd) in cols.items()}
+        (ihr, ihr_sd), (hal, hal_sd) = TABLE_6_IHR3_HAL[system]
+        metrics[system]["ihr@3"] = ihr + ihr_sd * rng.normal(0, 1, n)
+        metrics[system]["hallucination_hard"] = np.abs(hal + hal_sd * rng.normal(0, 1, n))
+        metrics[system]["calibration_kl"] = metrics[system]["ece"] ** 2 * 5
+    metrics["LLM-Only"]["calibration_kl"][3] = np.nan  # one persona with no offered turns
+    return sact, metrics
+
+
+def test_analysis_plan_runs_every_step_of_sec_4_8() -> None:
+    sact, metrics = _simulated_plan_inputs()
+    plan = S.analysis_plan(sact, metrics, n_iter=300, seed=0)
+
+    assert plan["sact_anova"]["systems"] == list(TABLE_6_SACT)
+    assert plan["sact_anova"]["p"] < 0.001
+    assert [c["system"] for c in plan["sact_pairwise"]] == ["TouchChat", "LLM-Only", "RAG-LLM", "M-LLM"]
+    assert all(c["stars"] == "***" for c in plan["sact_pairwise"])
+
+    assert set(plan["nonparametric"]) == set(S.NONPARAMETRIC_METRICS)
+    for res in plan["nonparametric"].values():
+        assert res["art_anova"]["p"] < 0.05
+        assert len(res["pairwise_wilcoxon"]) == 3
+
+    # Table 7: three baselines per column, each with a Holm-corrected marker.
+    assert set(plan["table_7"]) == set(S.TABLE_7_METRICS)
+    for tests in plan["table_7"].values():
+        assert [t["system"] for t in tests] == ["RAG-LLM", "M-LLM", "LLM-Only"]
+        assert all(t["p_holm"] >= t["p"] for t in tests)
+        assert all(t["significant"] and t["stars"] for t in tests)
+
+    calibration = plan["calibration"]
+    assert "LLM-Only" not in calibration["kl_from_diagonal"]  # a persona's KL is undefined
+    for c in calibration["ece_bootstrap"]:
+        assert c["ci_low"] <= c["ece_difference"] <= c["ci_high"]
+        assert c["ece_difference"] < 0  # MCGA-LM is the best calibrated, as in Table 7
+
+
+def test_analysis_plan_needs_the_reference_system() -> None:
+    sact, metrics = _simulated_plan_inputs()
+    sact.pop("MCGA-LM")
+    plan = S.analysis_plan(sact, {}, n_iter=10)
+    assert "sact_anova" not in plan
+    assert plan["table_7"] == {} and plan["nonparametric"] == {} and plan["calibration"] == {}
