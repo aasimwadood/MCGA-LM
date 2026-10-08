@@ -10,7 +10,7 @@ gives k+1 conditions, full-factorial gives 2^k. Fig. 3's five bars show the
 one-at-a-time version, which is the default here.
 
 ``--full-factorial`` runs all 32 cells, which is the only way to answer the
-interaction question Sec. 5.3 raises. See ERRATA.md.
+interaction question Sec. 5.3 raises. 
 """
 
 from __future__ import annotations

@@ -5,7 +5,7 @@ N = 20 MC-Dropout passes over the head alone -- not a re-run of generation, whic
 is what keeps uncertainty at ~12% of the latency budget rather than a 20x
 multiplier (Sec. 3.6, Table 5, Sec. 4.10). That is the default site. Before v3,
 Sec. 3.6 put the dropout in the LLM's LoRA modules instead; that reading is
-available as ``SafetyConfig.mc_dropout_site = "lora"`` (ERRATA.md, E-12).
+available as ``SafetyConfig.mc_dropout_site = "lora"``.
 
 The decoder is the 3-layer, 256-unit MLP of Eq. (12), reconstructing x_phys from
 the latent array so the bottleneck retains fine-grained state information.

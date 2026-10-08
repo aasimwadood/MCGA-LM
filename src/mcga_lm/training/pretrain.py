@@ -7,7 +7,7 @@ Eq. (12) is included, as part of Eq. (9). The contrastive term needs an
 utterance per record; MAMEM/CLAS/WESAD carry none, so it is active only for
 records that have a ``transcript`` -- the "public corpus of ambulatory
 physiological recordings and linguistic transcripts (released with our code)",
-which has not been released (ERRATA.md, E-9).
+which has not been released.
 
 Stage 2: "TFT pre-training: pre-trained on the same aggregated physiological
 datasets". It repeats stage 1's data with no stated difference (E-9); here it is

@@ -6,7 +6,7 @@ nodes as simplified "Intent Bubbles" selectable with one binary scan. tau is
 calibrated per user against a false-acceptance budget of 5%.
 
 The defaults follow the printed text. Two alternatives are available, because the
-printed text has known defects (both documented in ERRATA.md):
+printed text has known defects:
 
 * The calibration rule of Sec. 3.6 ("select the smallest tau with FAR <= 0.05")
   is trivially satisfied, because FAR is monotone in tau, so it returns the
@@ -204,7 +204,7 @@ class BayesianGate:
             return self.tau, trace
 
         rule = rule or getattr(self.cfg, "tau_rule", "smallest")
-        if rule == "smallest":  # Sec. 3.6 as printed (ERRATA.md, E-5)
+        if rule == "smallest":  
             best = min(feasible, key=lambda t: (t[2], -t[0]))
         elif rule == "largest":
             best = max(feasible)

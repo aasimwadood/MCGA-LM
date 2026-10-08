@@ -188,7 +188,7 @@ class SafetyConfig:
     # Sec. 3.6's intent-scoring head, which Table 5's latency figures assume.
     # 'lora' keeps dropout in the LLM's LoRA modules, as Sec. 3.6 said before
     # v3; it runs Eq. (8) over the LLM's token probabilities and needs the 'hf'
-    # backend. See ERRATA.md, E-12.
+    # backend.
     mc_dropout_site: str = "scoring_head"  # 'scoring_head' | 'lora'
     tau_default: float = 0.15  # Sec. 3.6 "default tau = 0.15"
     tau_grid_start: float = 0.02  # Sec. 3.6 calibration grid
@@ -203,7 +203,7 @@ class SafetyConfig:
 
     # Sec. 3.6: "select the smallest tau with FAR <= 0.05". FAR never falls as
     # tau rises, so this always returns the bottom of the grid when anything is
-    # feasible (ERRATA.md, E-5). 'largest' -- the largest tau that still meets
+    # feasible. 'largest' -- the largest tau that still meets
     # the budget -- has no counterpart in the paper.
     tau_rule: str = "smallest"  # 'smallest' | 'largest'
 
@@ -263,8 +263,6 @@ class InferenceConfig:
     # actually being breakage. 2.0-3.0 is the sensible starting range once
     # retrieval is fixed; check the abstention rate when enabling it.
     min_retrieval_mass_ratio: float = 0.0
-    # T_select, Sec. 4.2 and 5.2. With K=3 and P=0.89 this gives the 13.9
-    # bits/min Sec. 5.2 prints (it printed 18.3 before v3; ERRATA.md, E-2).
     scan_select_seconds: float = 4.2
 
     @property

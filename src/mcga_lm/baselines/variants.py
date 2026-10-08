@@ -12,8 +12,7 @@ remove Perceiver IO, TFT, GAT, the Bayesian gate, or cross-attention.
 
 Sec. 4.5 calls the ablation "full-factorial" and then describes removing one
 component at a time. Fig. 3 shows the one-at-a-time design, which is the default;
-``full_factorial_design()`` builds the 2^k design the first sentence claims. See
-ERRATA.md.
+``full_factorial_design()`` builds the 2^k design the first sentence claims.
 """
 
 from __future__ import annotations

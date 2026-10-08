@@ -83,8 +83,7 @@ def test_summary_reports_hard_and_soft_separately(graph) -> None:
 def test_detection_is_automatic_with_no_human_annotation_path() -> None:
     """Detection is automatic only, as Sec. 4.3 ("No human adjudication of
     generated utterances was performed"), the hallucination taxonomy and Sec. 6.3
-    say. Before v3, Sec. 3.8 also described two blinded annotators (ERRATA.md,
-    E-6). This test keeps a human-adjudication path from appearing unnoticed.
+    say. Before v3, Sec. 3.8 also described two blinded annotators . This test keeps a human-adjudication path from appearing unnoticed.
     """
     from mcga_lm.eval import hallucination as H
 

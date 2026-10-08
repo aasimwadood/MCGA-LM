@@ -310,7 +310,7 @@ def calibrate_thresholds(
     "tau is calibrated per user during the initial 30-minute session: collect
     ~50 low-confidence candidates ... compute FAR on held-out data ... select
     [the] smallest tau with FAR <= 0.05." ``rule`` defaults to
-    ``SafetyConfig.tau_rule``; see safety/gate.py and ERRATA.md, E-5.
+    ``SafetyConfig.tau_rule``; see safety/gate.py.
 
     Var(y_hat) comes from wherever ``SafetyConfig.mc_dropout_site`` says Eq. (8)
     runs, so tau is calibrated on the same quantity the gate will see.

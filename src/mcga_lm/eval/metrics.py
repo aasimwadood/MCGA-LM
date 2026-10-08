@@ -60,7 +60,7 @@ def information_transfer_rate(n_choices: int, accuracy: float, select_seconds: f
 
     Sec. 5.2's worked example -- K = 3, P = 0.89, T_select = 4.2 s -- gives
     13.9 bits/min, which this function reproduces. Before v3 the paper printed
-    18.3 for the same inputs (ERRATA.md, E-2).
+    18.3 for the same inputs.
     """
     if n_choices < 2 or select_seconds <= 0:
         return float("nan")

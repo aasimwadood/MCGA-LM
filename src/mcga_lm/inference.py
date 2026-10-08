@@ -20,7 +20,7 @@ asserts it.
 
 Line 7 runs Eq. (8) wherever ``SafetyConfig.mc_dropout_site`` says: the
 intent-scoring head (default, Sec. 3.6 and Table 5) or the LLM's LoRA modules
-(Sec. 3.6 before v3); see ERRATA.md, E-12. Accepted utterances update the graph and, when a
+(Sec. 3.6 before v3); Accepted utterances update the graph and, when a
 :class:`~mcga_lm.training.lora.LoRAUpdateQueue` is attached, wait in the 24-hour
 queue before fine-tuning the user's LoRA adapter (Sec. 3.6).
 

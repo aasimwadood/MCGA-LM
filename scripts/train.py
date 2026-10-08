@@ -47,7 +47,7 @@ def main() -> None:
         "--tau-rule",
         choices=["smallest", "largest"],
         default=None,
-        help="threshold-selection rule; default 'smallest' as in Sec. 3.6 (see ERRATA.md, E-5)",
+        help="threshold-selection rule; default 'smallest' as in Sec. 3.6",
     )
     parser.add_argument(
         "--instruction-data",

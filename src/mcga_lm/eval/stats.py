@@ -16,7 +16,7 @@ DEVIATION. Sec. 4.8 says the analyses were run in Python with Pingouin (the
 original manuscript said R 4.3.1 with afex and emmeans). This is a NumPy/SciPy
 implementation of the same plan, so the repository depends on neither. The
 formulas are standard and unit-tested, but no script or per-persona data behind
-the paper's own ANOVA and p-values has been published (ERRATA.md, E-1), so none
+the paper's own ANOVA and p-values has been published, so none
 of its printed inferential statistics can be checked against this code.
 """
 

@@ -13,7 +13,7 @@ STATUS: the three real loaders are UNVERIFIED -- they encode the published file
 layouts but have never been run against the actual archives.
 
 The participant counts and channels above differ from Sec. 4.1's description of
-the same datasets; see ERRATA.md.
+the same datasets;
 """
 
 from __future__ import annotations
