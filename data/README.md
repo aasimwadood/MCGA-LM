@@ -29,11 +29,16 @@ What each loader reads:
   their shared time span. Gaze is left out: it belongs to `x_beh`, which
   pre-training synthesises. Markers and the irregular Emotiv `VALUE` streams are
   not signals.
-* **CLAS.** Only the per-block files, `<block>_ecg_.csv` and
-  `<block>_gsr_ppg_.csv`, are read; the per-stimulus copies would count every
-  sample twice. Each block's type comes from `Block_details/Part#_Block_Details.csv`,
-  and a block whose type cannot be found is skipped and counted. ECG, GSR and PPG
-  are kept; the uncalibrated accelerometer is not.
+* **CLAS.** Only the per-block files under `Participants/Part<N>/`,
+  `<block>_ecg_.csv` and `<block>_gsr_ppg_.csv`, are read; the per-stimulus
+  copies would count every sample twice. Each block's type comes from
+  `Block_details/Part<N>_Block_Details.csv`, matched by block number, because
+  that file names the ECG file `<block>_ecg.csv` while on disk it is
+  `<block>_ecg_.csv`. Math and Stroop blocks are high load and every other block
+  low (Table 4), including the Logic task, which the archive calls "IQ Test".
+  Skipped and logged: the `Sample` folder, which has no participant number;
+  participant 4, which has no Block_Details; and the second copy of participant
+  25. ECG, GSR and PPG are kept; the uncalibrated accelerometer is not.
 * **WESAD.** ECG, EDA, EMG and respiration from the chest unit (700 Hz).
 
 Every recording is resampled to 64 Hz and cut into 2-s windows with 50% overlap
@@ -43,8 +48,8 @@ to fit a time budget; it is not part of the paper.
 
 **Status.** The MAMEM loader has been run on real Phase I session files. The
 WESAD loader follows the published pickle layout, and the CLAS loader follows the
-archive's documentation, with column names detected from content; neither has
-yet been run on the full archive here. Each loader logs how many windows it made
+released archive's folder and Block_Details layout, with signal columns detected
+from the file headers; neither has yet been run on the full archive here. Each loader logs how many windows it made
 per label and which files it skipped, and `pretrain_report.json` records the
 window count per corpus, so check those before relying on a run. Channel
 harmonisation into the `x_phys` layout is still a placeholder (assumption A-27).

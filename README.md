@@ -147,7 +147,7 @@ git clone <this repo> && cd MCGA-LM
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"          # core + pytest
 pip install -e ".[llm]"          # the paper's LLaMA-3-8B path
-pytest                           # 293 tests, ~15 s, no downloads
+pytest                           # 294 tests, ~15 s, no downloads
 ```
 
 Python ≥ 3.9 and PyTorch ≥ 2.1. The LoRA tests need the `[llm]` extras and skip
@@ -230,7 +230,7 @@ MCGA-LM/
 │   ├── baselines/               # 7 baselines + ablation variants
 │   ├── eval/                    # metrics, hallucination, stats, cost, runner
 │   └── viz/                     # Figs. 2–5 and the Table 5 latency breakdown
-└── tests/                       # 293 tests
+└── tests/                       # 294 tests
 ```
 
 

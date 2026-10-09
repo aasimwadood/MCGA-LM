@@ -92,10 +92,16 @@ def test_wesad_windows_each_condition_run_separately(tmp_path) -> None:
 
 
 # ------------------------------------------------------------------- CLAS -- #
-def _write_clas(root, participant: int, block: int, seconds: float) -> None:
+# The released archive: Participants/Part<N>/by_block/<block>_ecg_.csv and
+# _gsr_ppg_.csv, and Block_details/Part<N>_Block_Details.csv, which names the
+# ECG file "<block>_ecg.csv" -- without the underscore the file on disk has.
+DETAILS_HEADER = "Block,Block Type, ECG File,EDA&PPG File,Length(s),EDA Quality,ECG Quality,PPG Quality,\n"
+
+
+def _write_clas(root, folder: str, block: int, seconds: float) -> None:
     rng = np.random.default_rng(block)
     n = int(256 * seconds)
-    d = root / "Data" / f"Part{participant}" / "by_block"
+    d = root / "Participants" / folder / "by_block"
     d.mkdir(parents=True, exist_ok=True)
     t = np.arange(n) / 256
     np.savetxt(d / f"{block}_ecg_.csv", np.column_stack([t, rng.normal(size=n)]),
@@ -106,25 +112,44 @@ def _write_clas(root, participant: int, block: int, seconds: float) -> None:
     np.savetxt(d / f"{block}_ecg_1.csv", np.column_stack([t, rng.normal(size=n)]), delimiter=",")
 
 
-def test_clas_labels_blocks_from_block_details_and_reads_only_per_block_files(tmp_path) -> None:
-    root = tmp_path / "CLAS_Database"
-    _write_clas(root, 1, 1, 10)
-    _write_clas(root, 1, 2, 6)
-    _write_clas(root, 1, 3, 4)
-    (root / "Block_details").mkdir()
-    (root / "Block_details" / "Part1_Block_Details.csv").write_text(
-        "Block,Type,ECG file,GSR file,Quality\n"
-        "1,Math,1_ecg_.csv,1_gsr_ppg_.csv,good\n"
-        "2,Neutral,2_ecg_.csv,2_gsr_ppg_.csv,good\n"
-    )  # block 3 has no entry: its type is unknown, so it is skipped
+def _write_details(root, participant: int, blocks) -> None:
+    (root / "Block_details").mkdir(exist_ok=True)
+    rows = "".join(f"{b},{kind},{b}_ecg.csv,{b}_gsr_ppg_.csv,   {s:.2f},    1.00,    1.00,    1.00,\n"
+                   for b, kind, s in blocks)
+    (root / "Block_details" / f"Part{participant}_Block_Details.csv").write_text(DETAILS_HEADER + rows)
+
+
+@pytest.fixture()
+def clas_root(tmp_path):
+    root = tmp_path / "CLAS"
+    blocks = [(1, "Baseline", 10), (2, "Math Test", 6), (8, "IQ Test", 4), (9, "Video clip", 4)]
+    for b, _, s in blocks:
+        _write_clas(root, "Part1", b, s)
+        _write_clas(root, "Sample/Sample", b, s)     # the archive's example copy: no participant number
+    _write_clas(root, "Part1_copy", 2, 6)            # a second copy of participant 1's block 2
+    _write_clas(root, "Part4", 1, 10)                # participant 4 has no Block_Details
+    _write_details(root, 1, blocks)
     (root / "Answers").mkdir()
     (root / "Answers" / "Part1_c_i_answers.csv").write_text("q,correct\n1,1\n2,0\n")
+    return root
 
-    records = P.load_clas(root, W)
-    assert sum(r.load_label == "high" for r in records) == _n_windows(10)  # Math, Table 4
-    assert sum(r.load_label == "low" for r in records) == _n_windows(6)  # Neutral
+
+def test_clas_matches_block_details_by_block_number_and_labels_by_table_4(clas_root) -> None:
+    records = P.load_clas(clas_root, W)
+    assert sum(r.load_label == "high" for r in records) == _n_windows(6)  # Math, read once
+    # Baseline, the Logic task ("IQ Test") and video are all "other blocks": low
+    assert sum(r.load_label == "low" for r in records) == _n_windows(10) + _n_windows(4) + _n_windows(4)
     assert {r.signals.shape for r in records} == {(128, 3)}  # ECG, GSR, PPG
     assert {r.subject for r in records} == {"Part1"}
+
+
+def test_clas_inventory_reports_what_will_and_will_not_be_read(clas_root) -> None:
+    inv = P.clas_inventory(clas_root)
+    assert inv["participants"] == 2 and inv["blocks"] == 5 and inv["typed_blocks"] == 4
+    assert inv["high_load_blocks"] == 1
+    assert inv["block_types"] == {"baseline": 1, "iq test": 1, "math test": 1, "video clip": 1}
+    assert inv["participants_without_block_details"] == ["4"]
+    assert len(inv["folders_without_participant"]) == 1 and inv["duplicate_files"] == 2
 
 
 # ------------------------------------------------------------ windowing -- #

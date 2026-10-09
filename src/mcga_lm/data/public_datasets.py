@@ -10,11 +10,12 @@ directory is missing, and ``synthetic_pretraining_corpus`` provides a
 clearly-labelled substitute so pre-training runs offline.
 
 STATUS: the MAMEM loader follows the stream structure of the actual Phase I
-archive (inspected file by file); the WESAD loader follows the published pickle
-layout; the CLAS loader follows the archive's documented layout, with its column
-names detected from content. None has yet been run over the complete archives
-here, so each logs what it loaded and skipped, and pre-training reports the
-window count per corpus.
+archive (inspected file by file); the CLAS loader follows the folder and
+Block_Details layout of the released archive (checked against it with
+``clas_inventory``), with its signal columns detected from the file headers; the
+WESAD loader follows the published pickle layout. None has yet been run over a
+complete archive here, so each logs what it loaded and skipped, and pre-training
+reports the window count per corpus.
 
 Every recording is resampled to 64 Hz and cut into 2-s windows with 50% overlap
 (Sec. 4.1), each labelled with its condition's proxy target (Table 4).
@@ -25,6 +26,7 @@ the same datasets;
 
 from __future__ import annotations
 
+import collections
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -258,13 +260,21 @@ def load_mamem(root: str | Path, windowing: Optional[Windowing] = None) -> List[
 
 
 # -------------------------------------------------------------------- CLAS -- #
+# Layout of the released archive, as found in it:
+#   Participants/Part<N>/.../by_block/<block>_ecg_.csv       ECG
+#   Participants/Part<N>/.../by_block/<block>_gsr_ppg_.csv   GSR, PPG, accelerometer
+#   Block_details/Part<N>_Block_Details.csv
+#       Block, Block Type, ECG File, EDA&PPG File, Length(s), EDA/ECG/PPG Quality
+# Files are matched to blocks by block number: Block_Details names the ECG file
+# "<block>_ecg.csv", while on disk it is "<block>_ecg_.csv". The per-stimulus
+# copies of the same signals carry an index after the final underscore and are
+# not read, so no sample is counted twice. A folder with no participant number
+# (the archive's "Sample") is skipped, and so is a participant with no
+# Block_Details, rather than guessing its block types.
 CLAS_RATE_HZ = 256  # Shimmer3 ECG and GSR+ units
-# Table 4: arithmetic and Stroop blocks are high load, every other block low.
-CLAS_BLOCK_TYPES = ("neutral", "math", "logic", "stroop", "picture", "video", "baseline")
+# Table 4: arithmetic and Stroop blocks are high load, every other block low --
+# including the Logic task, which Block_Details calls "IQ Test".
 CLAS_HIGH_LOAD = ("math", "arithmetic", "stroop")
-# Per-block files are "<block>_ecg_.csv" and "<block>_gsr_ppg_.csv"; the
-# per-stimulus copies of the same signal carry an index after the final
-# underscore and are not read, so no sample is counted twice.
 _CLAS_BLOCK_FILE = re.compile(r"^(?P<block>.+?)_(?P<kind>ecg|gsr_ppg)_\.csv$", re.IGNORECASE)
 _PARTICIPANT = re.compile(r"part(?:icipant)?[\s_-]*(\d+)", re.IGNORECASE)
 
@@ -273,8 +283,13 @@ def _participant(path: Path) -> Optional[str]:
     for part in reversed(path.parts):
         m = _PARTICIPANT.search(part)
         if m:
-            return m.group(1)
+            return str(int(m.group(1)))
     return None
+
+
+def _block_id(text: str) -> str:
+    text = text.strip()
+    return str(int(text)) if text.isdigit() else text.lower()
 
 
 def _read_csv(path: Path) -> Tuple[List[str], np.ndarray]:
@@ -297,28 +312,77 @@ def _read_csv(path: Path) -> Tuple[List[str], np.ndarray]:
 
 
 def _clas_block_types(root: Path) -> Dict[Tuple[str, str], str]:
-    """``(participant, file name) -> block type`` from every ``Part#_Block_Details.csv``.
-
-    The column layout is in the archive's own documentation, not reproduced
-    here, so the type and file columns are found by content: a cell naming a
-    known block type, and cells naming ``.csv`` files.
-    """
+    """``(participant, block number) -> block type`` from every ``Part<N>_Block_Details.csv``."""
     import csv
 
     mapping: Dict[Tuple[str, str], str] = {}
-    for details in root.rglob("*_Block_Details.csv"):
+    for details in sorted(root.rglob("*_Block_Details.csv")):
         participant = _participant(details)
         with open(details, newline="", encoding="utf-8", errors="ignore") as fh:
-            for row in csv.reader(fh):
-                cells = [c.strip() for c in row]
-                kind = next(
-                    (t for c in cells if not c.lower().endswith(".csv") for t in CLAS_BLOCK_TYPES if t in c.lower()),
-                    None,
-                )
-                files = [f for c in cells for f in re.split(r"[;,\s]+", c) if f.lower().endswith(".csv")]
-                for f in files if kind else []:
-                    mapping[(participant or "", Path(f).name.lower())] = kind
+            rows = [[c.strip() for c in r] for r in csv.reader(fh) if r]
+        if participant is None or not rows:
+            continue
+        header = [h.lower() for h in rows[0]]
+        block_col = next((i for i, h in enumerate(header) if h == "block"), None)
+        type_col = next((i for i, h in enumerate(header) if "type" in h), None)
+        if block_col is None or type_col is None:
+            logger.warning("clas: %s has no Block / Block Type columns: %s", details, rows[0])
+            continue
+        for row in rows[1:]:
+            if len(row) > max(block_col, type_col) and row[block_col] and row[type_col]:
+                mapping[(participant, _block_id(row[block_col]))] = row[type_col].lower()
     return mapping
+
+
+def _clas_blocks(root: Path) -> Tuple[Dict[Tuple[str, str], Dict[str, Path]], List[str], List[str]]:
+    """Per-block files grouped by ``(participant, block)``, the folders skipped for
+    having no participant number, and the duplicate files left out."""
+    blocks: Dict[Tuple[str, str], Dict[str, Path]] = {}
+    no_participant: set = set()
+    duplicates: List[str] = []
+    for path in sorted(root.rglob("*.csv")):
+        m = _CLAS_BLOCK_FILE.match(path.name)
+        if not m:
+            continue
+        participant = _participant(path)
+        if participant is None:
+            no_participant.add(str(path.parent))
+            continue
+        files = blocks.setdefault((participant, _block_id(m.group("block"))), {})
+        kind = m.group("kind").lower()
+        if kind in files:  # a second copy of the same participant's block
+            duplicates.append(f"{path} (kept {files[kind]})")
+            continue
+        files[kind] = path
+    return blocks, sorted(no_participant), duplicates
+
+
+def _clas_high(block_type: str) -> bool:
+    return any(t in block_type for t in CLAS_HIGH_LOAD)
+
+
+def clas_inventory(root: str | Path) -> Dict[str, object]:
+    """What :func:`load_clas` would read, found without reading any signal.
+
+    For a quick check before a long pre-training run.
+    """
+    root = Path(root)
+    blocks, no_participant, duplicates = _clas_blocks(root)
+    types = _clas_block_types(root)
+    typed = {k: types[k] for k in blocks if k in types}
+    participants = {p for p, _ in blocks}
+    return {
+        "participants": len(participants),
+        "blocks": len(blocks),
+        "typed_blocks": len(typed),
+        "high_load_blocks": sum(_clas_high(t) for t in typed.values()),
+        "block_types": dict(sorted(collections.Counter(typed.values()).items())),
+        "participants_without_block_details": sorted(
+            participants - {p for p, _ in typed}, key=lambda p: int(p) if p.isdigit() else -1
+        ),
+        "folders_without_participant": no_participant,
+        "duplicate_files": len(duplicates),
+    }
 
 
 def _clas_signals(path: Path, kind: str) -> np.ndarray:
@@ -338,31 +402,21 @@ def _clas_signals(path: Path, kind: str) -> np.ndarray:
 
 
 def load_clas(root: str | Path, windowing: Optional[Windowing] = None) -> List[PhysiologyRecord]:
-    """CLAS (Markova et al., 2019): per-block ECG and GSR/PPG files under ``Data/``.
+    """CLAS (Markova et al., 2019): per-block ECG and GSR/PPG files.
 
-    Block types come from ``Block_details``; a block whose type cannot be found
-    there or in its path is skipped and counted, not guessed. The ECG and GSR/PPG
-    files of a block are resampled and joined channel-wise over their common
-    length.
+    Each block's type comes from ``Block_details``. The ECG and GSR/PPG files of
+    a block are resampled and joined channel-wise over their common length.
     """
     w = windowing or Windowing()
     root = _require(Path(root), "clas")
     types = _clas_block_types(root)
-    blocks: Dict[Tuple[str, str, str], Dict[str, Path]] = {}
-    for path in sorted(root.rglob("*.csv")):
-        m = _CLAS_BLOCK_FILE.match(path.name)
-        if m:
-            key = (_participant(path) or path.parent.name, str(path.parent), m.group("block"))
-            blocks.setdefault(key, {})[m.group("kind").lower()] = path
+    blocks, no_participant, duplicates = _clas_blocks(root)
     records: List[PhysiologyRecord] = []
-    skipped: List[str] = []
-    for (participant, _, block), files in sorted(blocks.items()):
-        kind = next((types[(participant, p.name.lower())] for p in files.values() if (participant, p.name.lower()) in types), None)
-        if kind is None:
-            text = " ".join(str(p).lower() for p in files.values())
-            kind = next((t for t in CLAS_BLOCK_TYPES if t in text), None)
-        if kind is None:
-            skipped.append(f"participant {participant} block {block} (block type unknown)")
+    skipped: List[str] = [f"{d} (no participant number)" for d in no_participant] + duplicates
+    for (participant, block), files in sorted(blocks.items()):
+        block_type = types.get((participant, block))
+        if block_type is None:
+            skipped.append(f"participant {participant} block {block} (not in Block_Details)")
             continue
         try:
             parts = [_resample(_clas_signals(files[k], k), CLAS_RATE_HZ, w.rate_hz) for k in ("ecg", "gsr_ppg") if k in files]
@@ -375,8 +429,7 @@ def load_clas(root: str | Path, windowing: Optional[Windowing] = None) -> List[P
             continue
         length = min(len(p) for p in parts)
         x = np.concatenate([p[:length] for p in parts], axis=1)
-        high = any(t in kind for t in CLAS_HIGH_LOAD)
-        label, fatigue = ("high", 0.75) if high else ("low", 0.20)
+        label, fatigue = ("high", 0.75) if _clas_high(block_type) else ("low", 0.20)
         records.extend(
             PhysiologyRecord(seg, fatigue, label, f"Part{participant}", "clas") for seg in _windows(x, w)
         )
