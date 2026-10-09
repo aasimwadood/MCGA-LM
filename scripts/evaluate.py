@@ -21,7 +21,7 @@ chance. Its output goes to runs/evaluate/quick/ and is stamped accordingly.
 
 from __future__ import annotations
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 import numpy as np
 
@@ -147,9 +147,9 @@ def main() -> None:
         "quick": bool(args.quick),
         "smoke_test_not_a_result": bool(args.quick),
         "per_persona": args.per_persona,
-        "provenance": provenance_note(),
+        "provenance": provenance_note(cfg),
         "results": {k: {"aggregate": v.aggregate, "per_persona": v.per_persona} for k, v in results.items()},
-        "held_out": {k: {"aggregate": v.aggregate} for k, v in heldout.items()},
+        "held_out": {k: {"aggregate": v.aggregate, "per_persona": v.per_persona} for k, v in heldout.items()},
         "statistics": stats,
         "instruction_tuning": instruction,
         # Sec. 3.6 safety: personas whose FAR the gate could not bound at all.
@@ -161,7 +161,7 @@ def main() -> None:
         },
     }
     save_json(payload, target / "results.json")
-    table = _markdown_tables(results, heldout, stats, report)
+    table = _markdown_tables(results, heldout, stats, report, provenance=provenance_note(cfg))
     if args.quick:
         table = (
             "> ⚠️ **SMOKE TEST, NOT A RESULT.** Reduced encoder, one training epoch,\n"
@@ -285,10 +285,10 @@ def _fmt_sact(agg: Dict[str, Dict[str, float]]) -> str:
     return base
 
 
-def _markdown_tables(results, heldout, stats, report=None) -> str:
+def _markdown_tables(results, heldout, stats, report=None, provenance: Optional[str] = None) -> str:
     lines: List[str] = []
     lines.append("# MCGA-LM results (synthetic personas)\n")
-    lines.append("> " + provenance_note().replace("\n", " ") + "\n")
+    lines.append("> " + (provenance or provenance_note()).replace("\n", " ") + "\n")
     lines.append("## Table 6 analogue - primary comparison\n")
     lines.append("| System | WPM ↑ | SACT ↓ | IHR@3 ↑ | Hard halluc. ↓ | Soft halluc. | FAR ↓ | Abstain |")
     lines.append("|---|---|---|---|---|---|---|---|")

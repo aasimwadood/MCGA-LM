@@ -22,6 +22,7 @@ a fatigue head fitted that way carries no physiological grounding.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Sequence, Tuple
@@ -32,7 +33,7 @@ import torch.nn as nn
 
 from ..config import Config
 from ..data.physiology import PhysiologySynthesiser
-from ..data.public_datasets import PhysiologyRecord, load_public_corpora, synthetic_pretraining_corpus
+from ..data.public_datasets import PhysiologyRecord, Windowing, load_public_corpora, synthetic_pretraining_corpus
 from ..losses import contrastive_loss, fatigue_loss, reconstruction_loss
 from ..models.perceiver_io import MultimodalBatch
 from ..pipeline import MCGALM
@@ -105,17 +106,27 @@ def pretrain(
     out_dir: Optional[str] = None,
     allow_synthetic: bool = True,
     backend_factory: Optional[Callable[[], object]] = None,
+    max_windows_per_recording: Optional[int] = None,
 ) -> Dict[str, object]:
     """Run stages 1 and 2 and checkpoint the encoder.
 
     ``epochs`` overrides both stages' epoch counts. ``backend_factory`` builds
     the language backend that embeds transcripts for the stage-1 contrastive
     term; it is called only if some record has a transcript.
+    ``max_windows_per_recording`` caps the windows taken from each recording, a
+    compute budget the paper does not have; ``None`` keeps every window.
     """
     set_seed(cfg.seed)
     device = resolve_device(cfg.training.device)
 
-    records = load_public_corpora(data_root)
+    # Sec. 3.2 / 4.1: x_phys at 64 Hz, 2-s windows with 50% overlap.
+    windowing = Windowing(
+        rate_hz=cfg.inputs.phys_rate_hz,
+        window=cfg.inputs.phys_window,
+        stride=max(1, cfg.inputs.phys_window // 2),
+        max_windows=max_windows_per_recording,
+    )
+    records = load_public_corpora(data_root, windowing=windowing)
     source = "public(MAMEM/CLAS/WESAD)"
     if not records:
         if not allow_synthetic:
@@ -160,6 +171,8 @@ def pretrain(
     result: Dict[str, object] = {
         "source": source,
         "n_records": len(records),
+        "records_by_source": {s: sum(r.source == s for r in records) for s in sorted({r.source for r in records})},
+        "windowing": vars(windowing),
         "n_transcripts": n_transcripts,
         "contrastive_active": backend is not None,
         "epochs": len(stage1),
@@ -207,6 +220,7 @@ def _run_stage(
     history: List[Dict[str, float]] = []
 
     for epoch in range(n_epochs):
+        t0 = time.time()
         rng.shuffle(indices)
         model.train()
         if not encoder_trainable:
@@ -252,12 +266,14 @@ def _run_stage(
             if epoch_losses
             else {k: float("nan") for k in ("loss", "fatigue_mse", "recon_mse", "contrastive", "fatigue_mae")}
         )
-        history.append({"epoch": epoch, **mean})
+        seconds = time.time() - t0
+        history.append({"epoch": epoch, **mean, "seconds": seconds})
         if epoch % max(1, n_epochs // 10) == 0 or epoch == n_epochs - 1:
             logger.info(
-                "pretrain %s epoch %d/%d loss=%.5f (fatigue MSE %.5f, MAE %.4f | recon MSE %.4f)",
+                "pretrain %s epoch %d/%d loss=%.5f (fatigue MSE %.5f, MAE %.4f | recon MSE %.4f) "
+                "%.0f s/epoch, ~%.1f h left in this stage",
                 name, epoch + 1, n_epochs, mean["loss"], mean["fatigue_mse"], mean["fatigue_mae"],
-                mean["recon_mse"],
+                mean["recon_mse"], seconds, seconds * (n_epochs - epoch - 1) / 3600,
             )
     return history
 

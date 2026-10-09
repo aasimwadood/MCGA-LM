@@ -223,7 +223,7 @@ def main() -> None:
 
     save_json(
         {
-            "provenance": provenance_note(),
+            "provenance": provenance_note(cfg),
             "settings": {"utterances": args.utterances, "days": args.days,
                          "personas": len(personas), "from_intake": args.from_intake,
                          "intake_nodes": args.intake_nodes if args.from_intake else None},

@@ -147,7 +147,7 @@ git clone <this repo> && cd MCGA-LM
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"          # core + pytest
 pip install -e ".[llm]"          # the paper's LLaMA-3-8B path
-pytest                           # 282 tests, ~15 s, no downloads
+pytest                           # 293 tests, ~15 s, no downloads
 ```
 
 Python ≥ 3.9 and PyTorch ≥ 2.1. The LoRA tests need the `[llm]` extras and skip
@@ -213,7 +213,7 @@ MCGA-LM/
 │   └── baselines/*.yaml         # LLM-Only, M-LLM, RAG-LLM
 ├── data/README.md               # DOIs for MAMEM/CLAS/WESAD; nothing bundled
 ├── runs/                        # outputs; no trained weights or results committed
-├── scripts/                     # 11 CLI entry points
+├── scripts/                     # 12 CLI entry points
 ├── src/mcga_lm/
 │   ├── config.py                # every hyperparameter, cited to the paper
 │   ├── pipeline.py              # Phases I–V assembled (Eq. 1)
@@ -230,7 +230,7 @@ MCGA-LM/
 │   ├── baselines/               # 7 baselines + ablation variants
 │   ├── eval/                    # metrics, hallucination, stats, cost, runner
 │   └── viz/                     # Figs. 2–5 and the Table 5 latency breakdown
-└── tests/                       # 282 tests
+└── tests/                       # 293 tests
 ```
 
 

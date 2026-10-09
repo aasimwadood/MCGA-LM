@@ -134,7 +134,7 @@ def main() -> None:
     crossing = next((x for x, m in zip(xs, means) if m <= baseline_sact), None)
     plot_learning_curve(xs, means, los, his, baseline_sact, target / "fig5_cold_start.png",
                         full_personalisation_at=crossing)
-    save_json({"provenance": provenance_note(), "baseline_sact": baseline_sact,
+    save_json({"provenance": provenance_note(cfg), "baseline_sact": baseline_sact,
                "curve": [{"n_accepted": x, "sact": m, "ci_low": lo, "ci_high": hi}
                          for x, m, lo, hi in zip(xs, means, los, his)],
                "crosses_baseline_at": crossing},

@@ -87,7 +87,7 @@ def main() -> None:
 
     save_json({"fatigued": args.fatigued, "full_factorial": args.full_factorial,
                "design": "2^k full factorial" if args.full_factorial else "one component at a time",
-               "provenance": provenance_note(), "ablations": table},
+               "provenance": provenance_note(cfg), "ablations": table},
               target / ("ablations_factorial.json" if args.full_factorial else "ablations.json"))
 
     # Fig. 3 plots the one-at-a-time conditions; under --full-factorial those are

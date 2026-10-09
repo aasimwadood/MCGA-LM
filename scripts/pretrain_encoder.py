@@ -28,6 +28,13 @@ def main() -> None:
         action="store_true",
         help="fail instead of falling back to synthetic physiology",
     )
+    parser.add_argument(
+        "--max-windows-per-recording",
+        type=int,
+        default=None,
+        help="keep at most this many evenly spaced 2-s windows per recording (a compute "
+        "budget, not in the paper; default keeps all)",
+    )
     args = parser.parse_args()
     cfg = load_config(args)
 
@@ -40,10 +47,11 @@ def main() -> None:
         out_dir=str(target),
         allow_synthetic=not args.require_public_data,
         backend_factory=lambda: build_backend(cfg),
+        max_windows_per_recording=args.max_windows_per_recording,
     )
     save_json(report, target / "pretrain_report.json")
     print(f"pre-training source : {report['source']}")
-    print(f"records             : {report['n_records']}")
+    print(f"windows             : {report['n_records']}  {report.get('records_by_source', {})}")
     print(f"final loss          : {report['final_loss']:.5f}")
     print(f"stage 1 / 2 epochs  : {report['epochs']} / {report['tft_epochs']}")
     print(f"fatigue MAE         : {report['final_fatigue_mae']:.4f}  (index scale 0-1, after stage 2)")
@@ -52,7 +60,7 @@ def main() -> None:
     print(f"checkpoint          : {report.get('checkpoint')}")
     if report["source"] == "synthetic":
         print("\nNOTE: pre-trained on SYNTHETIC physiology. The fatigue head carries no")
-        print("      claim about real HRV/EDA/EEG. " + provenance_note())
+        print("      claim about real HRV/EDA/EEG. " + provenance_note(cfg))
 
 
 if __name__ == "__main__":

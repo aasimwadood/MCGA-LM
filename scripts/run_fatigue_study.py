@@ -102,7 +102,7 @@ def main() -> None:
     plot_fatigue_trajectory(
         minutes, model_f.value(minutes), model_f.adapted_value(minutes), target / "fig4_fatigue.png"
     )
-    save_json({"provenance": provenance_note(), "rested_vs_fatigued": rows, "sensitivity_grid": grid},
+    save_json({"provenance": provenance_note(cfg), "rested_vs_fatigued": rows, "sensitivity_grid": grid},
               target / "fatigue_study.json")
     print(f"\nwritten to {target}")
 

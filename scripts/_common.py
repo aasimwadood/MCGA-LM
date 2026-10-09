@@ -93,10 +93,29 @@ def banner(title: str) -> None:
     print(f"\n{line}\n{title}\n{line}")
 
 
-def provenance_note() -> str:
+def provenance_note(cfg: Optional[Config] = None) -> str:
+    """What produced a result. Template-backend runs say they are not the paper's
+    figures; LLaMA runs name the model, the personas and the code commit."""
+    if cfg is None or cfg.llm.backend != "hf":
+        return (
+            "Produced by the MCGA-LM reference implementation on synthetic personas. "
+            "These are not the paper's reported figures. Runs on the template backend "
+            "(configs/default.yaml, configs/quick.yaml) use no language model at all; see the "
+            "Reproduction status section of README.md for what differs and why."
+        )
     return (
-        "Produced by the MCGA-LM reference implementation on synthetic personas. "
-        "These are not the paper's reported figures. Runs on the template backend "
-        "(configs/default.yaml, configs/quick.yaml) use no language model at all; see the "
-        "Reproduction status section of README.md for what differs and why."
+        f"Produced by this repository at commit {git_commit()} with {cfg.llm.model_name} "
+        f"({cfg.llm.quantisation}) on {cfg.simulation.n_personas} synthetic personas."
     )
+
+
+def git_commit() -> str:
+    """Short hash of the checked-out code, or "unknown" outside a git checkout."""
+    import subprocess
+
+    try:
+        out = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT,
+                             capture_output=True, text=True, timeout=10)
+        return out.stdout.strip() or "unknown"
+    except (OSError, subprocess.SubprocessError):
+        return "unknown"

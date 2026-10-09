@@ -161,7 +161,7 @@ def test_stage_one_contrastive_term_uses_transcripts(torch_mod, small_cfg, monke
     small_cfg.training.batch_size = 16
     records = P.synthetic_pretraining_corpus(small_cfg.inputs, seed=0)[:32]
     records = [replace(r, transcript=f"i would like some {w}") for r, w in zip(records, ["tea", "water"] * 16)]
-    monkeypatch.setattr(P, "load_public_corpora", lambda root: records)
+    monkeypatch.setattr(P, "load_public_corpora", lambda root, **_: records)
     report = P.pretrain(
         small_cfg, epochs=1,
         backend_factory=lambda: TemplateLanguageBackend(embedding_dim=small_cfg.inputs.ling_dim),

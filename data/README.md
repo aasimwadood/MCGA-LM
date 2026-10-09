@@ -12,24 +12,44 @@ Download these yourself and unpack them under `data/raw/<name>/`:
 | CLAS | 62 participants; ECG, PPG, EDA, accelerometry during arithmetic, logic and Stroop tasks | [10.1109/BIA48344.2019.8967457](https://doi.org/10.1109/BIA48344.2019.8967457) |
 | WESAD | 15 subjects; chest-worn ECG, EDA, EMG, respiration, acceleration | [10.1145/3267305.3267350](https://doi.org/10.1145/3267305.3267350) |
 
-Expected layout:
+Where to get them, and the layout the loaders expect:
 
-```
-data/raw/
-├── mamem/        # *.mat session files
-├── clas/         # per-participant CSV blocks
-└── wesad/
-    ├── S2/S2.pkl
-    ├── S3/S3.pkl
-    └── ...
-```
+| Dataset | Download | Unpack so that |
+|---|---|---|
+| MAMEM Phase I | figshare files [8946247](https://ndownloader.figshare.com/files/8946247) and [8964538](https://ndownloader.figshare.com/files/8964538) (Parts 1 and 2, 4.0 + 1.9 GB) | `mamem/<site>/<participant>/*.mat` |
+| CLAS | IEEE DataPort, [10.21227/ybsw-yr53](https://doi.org/10.21227/ybsw-yr53) (`CLAS_Database.zip`, 3.3 GB; free academic licence) | `clas/` holds `Data/` and `Block_details/` |
+| WESAD | [sciebo](https://uni-siegen.sciebo.de/s/HGdUkoNlW1Ub0Gx/download) (`WESAD.zip`, 2.2 GB). The UCI download is only a text file pointing here | `wesad/S2/S2.pkl`, `wesad/S3/S3.pkl`, ... |
 
-`scripts/pretrain_encoder.py` picks up whichever are present. **The loaders in
-`src/mcga_lm/data/public_datasets.py` are UNVERIFIED** — they encode the
-published file layouts but have not been run against the real archives here, and
-the channel harmonisation is a placeholder (assumption A-27).
+What each loader reads:
 
-If none are present the script falls back to a clearly-labelled synthetic
+* **MAMEM.** Each `.mat` is one session exported from Lab Streaming Layer: a
+  cell array of streams, each with its type, nominal rate, samples and
+  timestamps. The EEG stream (Emotiv, 14 channels at 128 Hz) and the BIO stream
+  (Shimmer GSR and heart rate, 2 channels at 256 Hz) are kept and aligned on
+  their shared time span. Gaze is left out: it belongs to `x_beh`, which
+  pre-training synthesises. Markers and the irregular Emotiv `VALUE` streams are
+  not signals.
+* **CLAS.** Only the per-block files, `<block>_ecg_.csv` and
+  `<block>_gsr_ppg_.csv`, are read; the per-stimulus copies would count every
+  sample twice. Each block's type comes from `Block_details/Part#_Block_Details.csv`,
+  and a block whose type cannot be found is skipped and counted. ECG, GSR and PPG
+  are kept; the uncalibrated accelerometer is not.
+* **WESAD.** ECG, EDA, EMG and respiration from the chest unit (700 Hz).
+
+Every recording is resampled to 64 Hz and cut into 2-s windows with 50% overlap
+(Sec. 4.1), and each window takes its condition's proxy target from Table 4.
+`--max-windows-per-recording` keeps fewer, evenly spaced windows per recording,
+to fit a time budget; it is not part of the paper.
+
+**Status.** The MAMEM loader has been run on real Phase I session files. The
+WESAD loader follows the published pickle layout, and the CLAS loader follows the
+archive's documentation, with column names detected from content; neither has
+yet been run on the full archive here. Each loader logs how many windows it made
+per label and which files it skipped, and `pretrain_report.json` records the
+window count per corpus, so check those before relying on a run. Channel
+harmonisation into the `x_phys` layout is still a placeholder (assumption A-27).
+
+`scripts/pretrain_encoder.py` uses whichever corpora are present. If none are present the script falls back to a clearly-labelled synthetic
 substitute and says so in its output and in the checkpoint metadata. Pass
 `--require-public-data` to make that a hard error instead.
 

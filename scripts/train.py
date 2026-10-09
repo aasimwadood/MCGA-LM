@@ -106,7 +106,7 @@ def main() -> None:
     else:
         reason = next(iter(report.lora_by_persona.values()), {}).get("skipped", "not run")
         print(f"LoRA adapters   : none trained ({reason})")
-    print("\n" + provenance_note())
+    print("\n" + provenance_note(cfg))
 
 
 if __name__ == "__main__":
